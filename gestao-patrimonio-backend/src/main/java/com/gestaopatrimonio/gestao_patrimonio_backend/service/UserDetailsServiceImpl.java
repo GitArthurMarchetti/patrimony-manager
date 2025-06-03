@@ -1,7 +1,7 @@
 package com.gestaopatrimonio.gestao_patrimonio_backend.service;
 
 import com.gestaopatrimonio.gestao_patrimonio_backend.model.User;
-
+import com.gestaopatrimonio.gestao_patrimonio_backend.repository.UserRepository;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -20,12 +20,8 @@ public class UserDetailsServiceImpl implements UserDetailsService {
     @Override
     public UserDetails loadUserByUsername(String username) throws
             UsernameNotFoundException {
-        // Busca o usuário no banco de dados
-        User user = userRepository.findByUsername(username)
+        return userRepository.findByUsername(username)
                 .orElseThrow(() -> new UsernameNotFoundException("User Not Found: " + username));
-
-        // Retorna o objeto User, que agora implementa UserDetails
-        return user;
     }
 
 }
