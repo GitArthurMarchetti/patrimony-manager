@@ -1,21 +1,27 @@
 package com.gestaopatrimonio.gestao_patrimonio_backend.config.security;
 
 import com.gestaopatrimonio.gestao_patrimonio_backend.service.UserDetailsServiceImpl;
-import com.gestaopatrimonio.gestao_patrimonio_backend.config.security.JwtAuthenticationFilter; // Certifique-se de importar o filtro JWT aqui!
-import lombok.RequiredArgsConstructor;
+import com.gestaopatrimonio.gestao_patrimonio_backend.config.security.JwtAuthenticationFilter;
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
+import org.springframework.security.config.Customizer; // IMPORT NECESSÁRIO
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.annotation.web.configurers.CsrfConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+
+import org.springframework.web.cors.CorsConfiguration; // IMPORT NECESSÁRIO
+import org.springframework.web.cors.CorsConfigurationSource; // IMPORT NECESSÁRIO
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource; // IMPORT NECESSÁRIO
+import java.util.Arrays; // IMPORT NECESSÁRIO
+import java.util.List; // IMPORT NECESSÁRIO
 
 @Configuration
 @EnableWebSecurity
@@ -24,28 +30,37 @@ public class SecurityConfig {
     private final JwtAuthenticationFilter jwtAuthFilter;
     private final UserDetailsServiceImpl userDetailsService;
 
-
     public SecurityConfig(JwtAuthenticationFilter jwtAuthFilter, UserDetailsServiceImpl userDetailsService) {
         this.jwtAuthFilter = jwtAuthFilter;
         this.userDetailsService = userDetailsService;
     }
 
-    
-
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                .csrf(CsrfConfigurer::disable)
+                .csrf(csrf -> csrf.disable())
+                .cors(Customizer.withDefaults()) // <-- AQUI! HABILITA CORS COM O BEAN corsConfigurationSource()
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers("/api/auth/**").permitAll()
-                        .requestMatchers("/h2-console/**").permitAll()
+                        .requestMatchers("/api/auth/**", "/h2-console/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .authenticationProvider(authenticationProvider())
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
+    }
+
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        CorsConfiguration config = new CorsConfiguration();
+        config.setAllowedOrigins(List.of("http://localhost:3000"));
+        config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        config.setAllowedHeaders(List.of("*"));
+        config.setAllowCredentials(true);
+        source.registerCorsConfiguration("/**", config);
+        return source;
     }
 
     @Bean
