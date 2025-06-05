@@ -1,6 +1,6 @@
 package com.gestaopatrimonio.gestao_patrimonio_backend.dto.auth;
 
-import jakarta.validation.constraints.NotBlank; 
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
