@@ -22,7 +22,7 @@ public class JwtService {
     private String secretKey;
 
     @Value("${application.security.jwt.expiration}")
-    private Long jwtExpiration; 
+    private Long jwtExpiration;
 
     public String extractUsername(String token){
         return extractClaim(token, Claims::getSubject);
@@ -70,14 +70,13 @@ public class JwtService {
         return extractExpiration(token).before(new Date());
     }
 
-
     private Date extractExpiration(String token) {
         return extractClaim(token, Claims::getExpiration);
     }
 
     // Método auxiliar para obter a chave secreta
     private Key getSignInKey() {
-        byte[] keyBytes = Decoders.BASE64.decode(secretKey);
+        byte[] keyBytes = Decoders.BASE64URL.decode(secretKey);
         return Keys.hmacShaKeyFor(keyBytes);
     }
 }

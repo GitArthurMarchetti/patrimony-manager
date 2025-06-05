@@ -22,9 +22,9 @@ public class Category {
     public Category(){
     }
 
-    public Category(String type, String name) {
-        this.type = type;
-        this.name = name;
+    public Category(String name, String type) { // <--- ORDEM CORRETA: name, type
+        this.name = name; // <--- Atribui o 'name' da requisição ao campo 'name' da entidade
+        this.type = type; // <--- Atribui o 'type' da requisição ao campo 'type' da entidade
     }
 
     public Long getId() {
