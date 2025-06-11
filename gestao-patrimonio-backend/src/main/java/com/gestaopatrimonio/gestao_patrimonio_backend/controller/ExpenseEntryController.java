@@ -1,6 +1,5 @@
 package com.gestaopatrimonio.gestao_patrimonio_backend.controller;
 
-
 import com.gestaopatrimonio.gestao_patrimonio_backend.dto.category.CategoryResponse;
 import com.gestaopatrimonio.gestao_patrimonio_backend.dto.entry.EntryRequest;
 import com.gestaopatrimonio.gestao_patrimonio_backend.dto.entry.EntryResponse;
@@ -14,7 +13,14 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -48,7 +54,7 @@ public class ExpenseEntryController {
                 return user.getId();
             }
         }
-        throw new IllegalStateException("User not authenticated or ID not available.");
+        throw new IllegalArgumentException("User not authenticated or ID not available.");
     }
 
     @PostMapping
@@ -76,7 +82,6 @@ public class ExpenseEntryController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
-
     @GetMapping
     public ResponseEntity<List<EntryResponse>> getAllExpenseEntries() {
         Long userId = getAuthenticatedUserId();
@@ -85,6 +90,17 @@ public class ExpenseEntryController {
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
         return ResponseEntity.ok(expenseEntries);
+    }
+
+    /** NOVO ENDPOINT: Obter histórico de gastos por ID de categoria **/
+    @GetMapping("/byCategory/{categoryId}")
+    public ResponseEntity<List<EntryResponse>> getExpensesByCategoryId(@PathVariable Long categoryId) {
+        Long userId = getAuthenticatedUserId();
+        List<ExpenseEntry> expenses = expenseEntryService.getExpenseEntriesByCategoryIdAndUser(categoryId, userId);
+        List<EntryResponse> expenseDTOs = expenses.stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(expenseDTOs);
     }
 
     @PutMapping("/{id}")
@@ -115,6 +131,4 @@ public class ExpenseEntryController {
             return ResponseEntity.badRequest().build();
         }
     }
-
-
 }

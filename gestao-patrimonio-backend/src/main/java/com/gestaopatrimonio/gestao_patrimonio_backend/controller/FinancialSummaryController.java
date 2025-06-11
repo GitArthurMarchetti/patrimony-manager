@@ -1,12 +1,16 @@
 package com.gestaopatrimonio.gestao_patrimonio_backend.controller;
 
-
+import com.gestaopatrimonio.gestao_patrimonio_backend.dto.category.CategoryResponse;
+import com.gestaopatrimonio.gestao_patrimonio_backend.dto.summary.CategorySummaryResponse;
 import com.gestaopatrimonio.gestao_patrimonio_backend.dto.summary.FinancialSummaryResponse;
 import com.gestaopatrimonio.gestao_patrimonio_backend.model.ExpenseEntry;
 import com.gestaopatrimonio.gestao_patrimonio_backend.model.ProfitEntry;
 import com.gestaopatrimonio.gestao_patrimonio_backend.model.User;
+
+import com.gestaopatrimonio.gestao_patrimonio_backend.service.CategoryService;
 import com.gestaopatrimonio.gestao_patrimonio_backend.service.ExpenseEntryService;
 import com.gestaopatrimonio.gestao_patrimonio_backend.service.ProfitEntryService;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -18,14 +22,16 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.ArrayList;
 
 @RestController
 @RequestMapping("/api/summary")
 @RequiredArgsConstructor
 public class FinancialSummaryController {
 
-private final ProfitEntryService profitEntryService;
-private  final ExpenseEntryService expenseEntryService;
+    private final ProfitEntryService profitEntryService;
+    private final ExpenseEntryService expenseEntryService;
+    private final CategoryService categoryService;
 
     private Long getAuthenticatedUserId() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -54,8 +60,21 @@ private  final ExpenseEntryService expenseEntryService;
 
         BigDecimal netWorth = totalProfits.subtract(totalExpenses);
 
-        FinancialSummaryResponse summary = new FinancialSummaryResponse(totalProfits, totalExpenses, netWorth);
+        List<CategorySummaryResponse> profitsByCategory = profitEntryService.getProfitsSummaryByCategoryAndUser(userId);
+        List<CategorySummaryResponse> expensesByCategory = expenseEntryService.getExpensesSummaryByCategoryAndUser(userId);
+
+        List<CategoryResponse> allCategories = categoryService.getAllCategoriesByUserId(userId);
+
+
+        FinancialSummaryResponse summary = new FinancialSummaryResponse(
+                totalProfits,
+                totalExpenses,
+                netWorth,
+                profitsByCategory,
+                expensesByCategory,
+                allCategories
+        );
+
         return ResponseEntity.ok(summary);
     }
-
 }

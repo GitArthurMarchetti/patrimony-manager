@@ -1,8 +1,9 @@
 'use client';
 
-import React, { createContext, useState, useEffect, useContext, ReactNode } from 'react';
-import { getAuthToken, setAuthToken, removeAuthToken } from './auth-utils';
+import React, { createContext, useState, useEffect, useContext, useCallback, ReactNode } from 'react';
+import { getAuthToken, setAuthToken, removeAuthToken, registerLogoutCallback } from './auth-utils';
 import { loginUser as apiLoginUser, registerUser as apiRegisterUser } from './api/auth';
+import { useRouter } from 'next/navigation'; // <-- ADICIONADO PARA USAR useRouter
 import { AuthResponse, LoginRequest, RegisterRequest } from './types';
 
 interface AuthContextType {
@@ -22,8 +23,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [token, setToken] = useState<string | null>(null);
   const [user, setUser] = useState<{ username: string } | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
+  const router = useRouter();
+
+  // CORREÇÃO: Lista de dependências otimizada para 'logout'
+  const logout = useCallback(() => {
+    removeAuthToken();
+    setToken(null);
+    setIsAuthenticated(false);
+    setUser(null);
+    router.replace('/login'); // Preferível no Next.js para navegação SPA
+  }, [router]); // Apenas 'router' é uma dependência que pode mudar (embora router seja geralmente estável também)
 
   useEffect(() => {
+    registerLogoutCallback(logout);
+
     const storedToken = getAuthToken();
     if (storedToken) {
       setToken(storedToken);
@@ -31,7 +44,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setUser({ username: 'Authenticated User' });
     }
     setLoading(false);
-  }, []);
+  }, [logout]); // 'logout' como dependência do useEffect está correto aqui
 
   const login = async (credentials: LoginRequest) => {
     setLoading(true);
@@ -63,13 +76,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } finally {
       setLoading(false);
     }
-  };
-
-  const logout = () => {
-    removeAuthToken();
-    setToken(null);
-    setIsAuthenticated(false);
-    setUser(null);
   };
 
   return (

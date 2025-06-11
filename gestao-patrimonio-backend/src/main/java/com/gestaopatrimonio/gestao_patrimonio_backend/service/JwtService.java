@@ -3,13 +3,14 @@ package com.gestaopatrimonio.gestao_patrimonio_backend.service;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
-import io.jsonwebtoken.io.Decoders;
+// import io.jsonwebtoken.io.Decoders; // Não precisa mais importar Decoders
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
 import java.security.Key;
+import java.nio.charset.StandardCharsets; // IMPORT NECESSÁRIO
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -74,9 +75,7 @@ public class JwtService {
         return extractClaim(token, Claims::getExpiration);
     }
 
-    // Método auxiliar para obter a chave secreta
     private Key getSignInKey() {
-        byte[] keyBytes = Decoders.BASE64URL.decode(secretKey);
-        return Keys.hmacShaKeyFor(keyBytes);
+        return Keys.hmacShaKeyFor(secretKey.getBytes(StandardCharsets.UTF_8));
     }
 }

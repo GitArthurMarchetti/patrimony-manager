@@ -1,5 +1,7 @@
 const TOKEN_KEY = 'jwt_token';
 
+let logoutCallback: (() => void) | null = null;
+
 export const setAuthToken = (token: string) => {
   if (typeof window !== 'undefined') {
     localStorage.setItem(TOKEN_KEY, token);
@@ -16,5 +18,15 @@ export const getAuthToken = (): string | null => {
 export const removeAuthToken = () => {
   if (typeof window !== 'undefined') {
     localStorage.removeItem(TOKEN_KEY);
+  }
+};
+
+export const registerLogoutCallback = (callback: () => void) => {
+  logoutCallback = callback;
+};
+
+export const triggerLogout = () => {
+  if (logoutCallback) {
+    logoutCallback();
   }
 };

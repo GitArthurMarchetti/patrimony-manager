@@ -15,6 +15,12 @@ export const getAllExpenses = async (): Promise<EntryResponse[]> => {
   }) as Promise<EntryResponse[]>;
 };
 
+export const getExpensesByCategoryId = async (categoryId: number): Promise<EntryResponse[]> => {
+  return fetchApi(`/expenses/byCategory/${categoryId}`, {
+    method: 'GET',
+  }) as Promise<EntryResponse[]>;
+};
+
 export const getExpenseById = async (id: number): Promise<EntryResponse> => {
   return fetchApi(`/expenses/${id}`, {
     method: 'GET',

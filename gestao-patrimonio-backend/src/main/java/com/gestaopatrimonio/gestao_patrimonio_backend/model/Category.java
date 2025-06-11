@@ -1,8 +1,13 @@
 package com.gestaopatrimonio.gestao_patrimonio_backend.model;
 
-
-import jakarta.persistence.*;
-
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
 import java.util.Objects;
 
 @Entity
@@ -13,20 +18,27 @@ public class Category {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(unique = true, nullable = false)
+
+    @Column(nullable = false)
     private String name;
 
     @Column(nullable = false)
     private String type;
 
-    public Category(){
+    @ManyToOne
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
+
+    public Category() {
     }
 
-    public Category(String name, String type) { // <--- ORDEM CORRETA: name, type
-        this.name = name; // <--- Atribui o 'name' da requisição ao campo 'name' da entidade
-        this.type = type; // <--- Atribui o 'type' da requisição ao campo 'type' da entidade
+    public Category(String name, String type, User user) {
+        this.name = name;
+        this.type = type;
+        this.user = user; // ATRIBUI O USUÁRIO
     }
 
+    // --- Getters e Setters (adicionar para 'user' e ajustar construtor padrão) ---
     public Long getId() {
         return id;
     }
@@ -49,6 +61,14 @@ public class Category {
 
     public void setType(String type) {
         this.type = type;
+    }
+
+    public User getUser() { // NOVO GETTER
+        return user;
+    }
+
+    public void setUser(User user) { // NOVO SETTER
+        this.user = user;
     }
 
     @Override

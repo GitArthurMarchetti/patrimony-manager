@@ -1,7 +1,11 @@
 package com.gestaopatrimonio.gestao_patrimonio_backend.service;
 
-import com.gestaopatrimonio.gestao_patrimonio_backend.model.*;
-import com.gestaopatrimonio.gestao_patrimonio_backend.repository.*;
+import com.gestaopatrimonio.gestao_patrimonio_backend.model.ExpenseEntry;
+import com.gestaopatrimonio.gestao_patrimonio_backend.model.User;
+import com.gestaopatrimonio.gestao_patrimonio_backend.model.Category;
+import com.gestaopatrimonio.gestao_patrimonio_backend.repository.ExpenseEntryRepository;
+import com.gestaopatrimonio.gestao_patrimonio_backend.repository.UserRepository;
+import com.gestaopatrimonio.gestao_patrimonio_backend.repository.CategoryRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -9,6 +13,10 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+import com.gestaopatrimonio.gestao_patrimonio_backend.dto.summary.CategorySummaryResponse;
 
 @Service
 public class ExpenseEntryService {
@@ -46,11 +54,43 @@ public class ExpenseEntryService {
         return expenseEntryRepository.findByUserOrderByDateDesc(user);
     }
 
+    public List<CategorySummaryResponse> getExpensesSummaryByCategoryAndUser(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("Usuário não encontrado com o ID: " + userId));
+
+        List<ExpenseEntry> userExpenses = expenseEntryRepository.findByUserOrderByDateDesc(user);
+
+        Map<Category, BigDecimal> expensesByCategoryMap = userExpenses.stream()
+                .collect(Collectors.groupingBy(
+                        ExpenseEntry::getCategory,
+                        Collectors.reducing(BigDecimal.ZERO, ExpenseEntry::getAmount, BigDecimal::add)
+                ));
+
+        return expensesByCategoryMap.entrySet().stream()
+                .map(entry -> new CategorySummaryResponse(
+                        entry.getKey().getId(),
+                        entry.getKey().getName(),
+                        entry.getKey().getType(),
+                        entry.getValue()
+                ))
+                .collect(Collectors.toList());
+    }
+
+    public List<ExpenseEntry> getExpenseEntriesByCategoryIdAndUser(Long categoryId, Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("Usuário não encontrado com o ID: " + userId));
+        Category category = categoryRepository.findById(categoryId)
+                .orElseThrow(() -> new IllegalArgumentException("Categoria não encontrada com o ID: " + categoryId));
+
+        return expenseEntryRepository.findByUserAndCategoryOrderByDateDesc(user, category);
+    }
+
     @Transactional
     public ExpenseEntry updateExpenseEntry(Long id, Long userId, Long categoryId, ExpenseEntry updatedExpenseEntry) {
         ExpenseEntry existingEntry = expenseEntryRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Entrada de gasto não encontrada com o ID: " + id));
 
+        // CORREÇÃO: Usar 'existingEntry' aqui
         if (!existingEntry.getUser().getId().equals(userId)) {
             throw new IllegalArgumentException("Entrada de gasto não pertence ao usuário.");
         }

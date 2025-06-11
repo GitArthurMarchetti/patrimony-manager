@@ -83,6 +83,18 @@ public class ProfitEntryController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
+    @GetMapping("/byCategory/{categoryId}")
+    public ResponseEntity<List<EntryResponse>> getProfitsByCategoryId(@PathVariable Long categoryId) {
+        Long userId = getAuthenticationUserId();
+        List<ProfitEntry> profitEntries = profitEntryService.getProfitEntriesByCategoryIdAndUser(categoryId, userId);
+
+        List<EntryResponse> responses = profitEntries.stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
+
+        return ResponseEntity.ok(responses);
+    }
+
     @GetMapping
     public ResponseEntity<List<EntryResponse>> getAllProfitEntries(){
         Long userId = getAuthenticationUserId();

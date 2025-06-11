@@ -1,14 +1,17 @@
 package com.gestaopatrimonio.gestao_patrimonio_backend.controller;
 
-
 import com.gestaopatrimonio.gestao_patrimonio_backend.dto.category.CategoryRequest;
 import com.gestaopatrimonio.gestao_patrimonio_backend.dto.category.CategoryResponse;
 import com.gestaopatrimonio.gestao_patrimonio_backend.model.Category;
+import com.gestaopatrimonio.gestao_patrimonio_backend.model.User; // NOVO IMPORT: Importar a entidade User
 import com.gestaopatrimonio.gestao_patrimonio_backend.service.CategoryService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication; // NOVO IMPORT
+import org.springframework.security.core.context.SecurityContextHolder; // NOVO IMPORT
+import org.springframework.security.core.userdetails.UserDetails; // NOVO IMPORT
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -20,6 +23,16 @@ import java.util.stream.Collectors;
 public class CategoryController {
 
     private final CategoryService categoryService;
+
+    private Long getAuthenticatedUserId() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication != null && authentication.getPrincipal() instanceof UserDetails userDetails) {
+            if (userDetails instanceof User user) {
+                return user.getId();
+            }
+        }
+        throw new IllegalStateException("User not authenticated or ID not available.");
+    }
 
     private CategoryResponse mapToResponse(Category category){
         return new CategoryResponse(
@@ -35,9 +48,9 @@ public class CategoryController {
             @RequestBody
             CategoryRequest request){
         try{
-            Category category = new Category(request.getName(), request.getType());
-            Category savedCategory = categoryService.createCategory(category);
-            return ResponseEntity.status(HttpStatus.CREATED).body(mapToResponse(savedCategory));
+            Long userId = getAuthenticatedUserId(); // Obtém o ID do usuário
+            CategoryResponse savedCategory = categoryService.createCategory(request, userId); // PASSA O userId
+            return ResponseEntity.status(HttpStatus.CREATED).body(savedCategory);
         } catch (IllegalArgumentException e){
             return ResponseEntity.badRequest().build();
         }
@@ -45,19 +58,16 @@ public class CategoryController {
 
     @GetMapping("/{id}")
     public ResponseEntity<CategoryResponse> getCategoryById(@PathVariable Long id){
-        return categoryService.getCategoryById(id)
-                .map(this::mapToResponse)
-                .map(ResponseEntity::ok)
+        Long userId = getAuthenticatedUserId(); // Obtém o ID do usuário
+        return categoryService.getCategoryByIdAndUser(id, userId) // CHAMA O MÉTODO COM userId
+                .map(ResponseEntity::ok) // mapToResponse já está implícito no retorno do serviço
                 .orElse(ResponseEntity.notFound().build());
     }
 
     @GetMapping
     public ResponseEntity<List<CategoryResponse>> getAllCategories(){
-        List<CategoryResponse> categories =
-        categoryService.getAllCategories()
-                .stream()
-                .map(this::mapToResponse)
-                .collect(Collectors.toList());
+        Long userId = getAuthenticatedUserId(); // Obtém o ID do usuário
+        List<CategoryResponse> categories = categoryService.getAllCategoriesByUserId(userId); // CHAMA O MÉTODO COM userId
         return ResponseEntity.ok(categories);
     }
 
@@ -67,22 +77,20 @@ public class CategoryController {
             @Valid @RequestBody CategoryRequest request
     ) {
         try{
-            Category category = new Category(
-                    request.getName(),
-                    request.getType());
-            Category update = categoryService.updateCategory(id, category);
-            return ResponseEntity.ok(mapToResponse(update));
+            Long userId = getAuthenticatedUserId(); // Obtém o ID do usuário
+            CategoryResponse update = categoryService.updateCategory(id, request, userId); // PASSA O userId
+            return ResponseEntity.ok(update);
         }
         catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().build();
         }
     }
 
-
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteCategory(@PathVariable Long id){
         try{
-            categoryService.deleteCategory(id);
+            Long userId = getAuthenticatedUserId(); // Obtém o ID do usuário
+            categoryService.deleteCategory(id, userId); // PASSA O userId
             return ResponseEntity.noContent().build();
         }catch (IllegalArgumentException e){
             return ResponseEntity.badRequest().build();

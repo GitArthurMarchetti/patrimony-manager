@@ -1,8 +1,13 @@
 package com.gestaopatrimonio.gestao_patrimonio_backend.model;
 
-
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority; // NOVO IMPORT
 import org.springframework.security.core.userdetails.UserDetails;
 
 import java.util.Collection;
@@ -12,7 +17,6 @@ import java.util.Objects;
 @Entity
 @Table(name = "users")
 public class User implements UserDetails {
-
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -58,11 +62,11 @@ public class User implements UserDetails {
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return List.of();
+        return List.of(new SimpleGrantedAuthority("ROLE_USER"));
     }
 
     @Override
-    public boolean isAccountNonExpired(){
+    public boolean isAccountNonExpired() {
         return true;
     }
 
@@ -72,17 +76,18 @@ public class User implements UserDetails {
     }
 
     @Override
-    public boolean isCredentialsNonExpired(){
+    public boolean isCredentialsNonExpired() {
         return true;
     }
 
     @Override
-    public boolean isEnabled(){
+    public boolean isEnabled() {
         return true;
     }
 
     @Override
     public boolean equals(Object o) {
+        if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         User user = (User) o;
         return id != null && Objects.equals(id, user.id);
@@ -94,7 +99,7 @@ public class User implements UserDetails {
     }
 
     @Override
-    public String toString(){
+    public String toString() {
         return "User{" +
                 "id=" + id +
                 ", username='" + username + '\'' +

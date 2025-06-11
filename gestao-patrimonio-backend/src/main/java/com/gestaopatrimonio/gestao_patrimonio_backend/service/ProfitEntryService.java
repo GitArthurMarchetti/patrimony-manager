@@ -1,16 +1,22 @@
 package com.gestaopatrimonio.gestao_patrimonio_backend.service;
 
-import com.gestaopatrimonio.gestao_patrimonio_backend.model.*;
-import com.gestaopatrimonio.gestao_patrimonio_backend.repository.*;
-
-import org.springframework.transaction.annotation.Transactional;
-
+import com.gestaopatrimonio.gestao_patrimonio_backend.model.ProfitEntry;
+import com.gestaopatrimonio.gestao_patrimonio_backend.model.User;
+import com.gestaopatrimonio.gestao_patrimonio_backend.model.Category;
+import com.gestaopatrimonio.gestao_patrimonio_backend.repository.ProfitEntryRepository;
+import com.gestaopatrimonio.gestao_patrimonio_backend.repository.UserRepository;
+import com.gestaopatrimonio.gestao_patrimonio_backend.repository.CategoryRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+import com.gestaopatrimonio.gestao_patrimonio_backend.dto.summary.CategorySummaryResponse; // Import do DTO
 
 @Service
 public class ProfitEntryService {
@@ -24,8 +30,6 @@ public class ProfitEntryService {
         this.userRepository = userRepository;
         this.categoryRepository = categoryRepository;
     }
-
-
 
     @Transactional
     public ProfitEntry createProfitEntry(Long userId, Long categoryId, ProfitEntry profitEntry){
@@ -44,11 +48,42 @@ public class ProfitEntryService {
                 .filter(entry -> entry.getUser().getId().equals(userId));
     }
 
-
     public List<ProfitEntry> getAllProfitEntriesByUser(Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("Usuário não encontrado com o ID: " + userId));
         return profitEntryRepository.findByUserOrderByDateDesc(user);
+    }
+
+    public List<CategorySummaryResponse> getProfitsSummaryByCategoryAndUser(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("Usuário não encontrado com o ID: " + userId));
+
+        List<ProfitEntry> userProfits = profitEntryRepository.findByUserOrderByDateDesc(user);
+
+        Map<Category, BigDecimal> profitsByCategoryMap = userProfits.stream()
+                .collect(Collectors.groupingBy(
+                        ProfitEntry::getCategory,
+                        Collectors.reducing(BigDecimal.ZERO, ProfitEntry::getAmount, BigDecimal::add)
+                ));
+
+        return profitsByCategoryMap.entrySet().stream()
+                .map(entry -> new CategorySummaryResponse(
+                        entry.getKey().getId(),
+                        entry.getKey().getName(),
+                        entry.getKey().getType(),
+                        entry.getValue()
+                ))
+                .collect(Collectors.toList());
+    }
+
+    /** NOVO MÉTODO: Obter lucros por ID de categoria e usuário **/
+    public List<ProfitEntry> getProfitEntriesByCategoryIdAndUser(Long categoryId, Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("Usuário não encontrado com o ID: " + userId));
+        Category category = categoryRepository.findById(categoryId)
+                .orElseThrow(() -> new IllegalArgumentException("Categoria não encontrada com o ID: " + categoryId));
+
+        return profitEntryRepository.findByUserAndCategoryOrderByDateDesc(user, category);
     }
 
 
@@ -73,7 +108,6 @@ public class ProfitEntryService {
 
         return profitEntryRepository.save(existingEntry);
     }
-
 
     @Transactional
     public void deleteProfitEntry(Long id, Long userId) {
