@@ -1,24 +1,23 @@
+// app/dashboard/page.tsx
 'use client';
 
 import React, { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from './lib/auth-context';
+import { Node, Edge } from 'vis-network/standalone';
 import { CategoryResponse, EntryResponse, FinancialSummaryResponse } from './lib/types';
-import { getFinancialSummary } from './lib/api/profits';
-import CircleVisualization from './components/dashboard/Circle';
-import Modal from './components/common/Modal';
-import CategoryForm from './components/common/CategoryForm';
-import EntryForm from './components/common/forms/EntryForm';
+import { useAuth } from './lib/auth-context';
+import { getFinancialSummary } from './lib/api/summary';
+import GraphView from './components/GraphView';
+import { Card, CardContent } from '@/components/ui/card';
+import ActionButtonsAndModals from './components/dashboard/ButtonCreate';
+
 
 export default function DashboardPage() {
-  const { isAuthenticated, user, loading, logout, token } = useAuth();
+  const { isAuthenticated, loading, token } = useAuth();
   const router = useRouter();
   const [summary, setSummary] = useState<FinancialSummaryResponse | null>(null);
   const [dataLoading, setDataLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [showCategoryModal, setShowCategoryModal] = useState(false);
-  const [showProfitModal, setShowProfitModal] = useState(false);
-  const [showExpenseModal, setShowExpenseModal] = useState(false);
 
   const fetchSummary = useCallback(async () => {
     if (!token) {
@@ -29,10 +28,8 @@ export default function DashboardPage() {
     setDataLoading(true);
     try {
       const data = await getFinancialSummary();
-      console.log("Fetched summary data:", data);
       setSummary(data);
     } catch (err: unknown) {
-      console.error("Failed to fetch financial summary:", err);
       setError(err instanceof Error ? err.message : 'Failed to load financial summary.');
     } finally {
       setDataLoading(false);
@@ -52,120 +49,171 @@ export default function DashboardPage() {
     fetchSummary();
   }, [isAuthenticated, loading, router, fetchSummary]);
 
-  const handleCategorySuccess = (newCategory: CategoryResponse) => {
+  const handleCategorySuccess = useCallback((newCategory: CategoryResponse) => {
     console.log("Category created successfully:", newCategory);
-    setShowCategoryModal(false);
-    fetchSummary();
-  };
+  }, []);
 
-  const handleEntrySuccess = (newEntry: EntryResponse) => {
+  const handleEntrySuccess = useCallback((newEntry: EntryResponse) => {
     console.log("Entry created successfully:", newEntry);
-    setShowProfitModal(false);
-    setShowExpenseModal(false);
-    fetchSummary();
-  };
+  }, []);
+
+  // --- NOVA FUNÇÃO PARA CLICAR EM CATEGORIA ---
+  const handleNodeClick = useCallback((nodeId: string | number) => {
+    // Verifique se o nodeId é para uma categoria (já filtrado no GraphView, mas bom para segurança)
+    if (typeof nodeId === 'string' && nodeId.startsWith('cat_')) {
+      const categoryId = nodeId.replace('cat_', '');
+      console.log(`Nó de categoria clicado: ${categoryId}`);
+      router.push(`/dashboard/categories/${categoryId}`);
+    } else if (nodeId === 'net_worth') {
+        console.log("Nó central clicado (Patrimônio Líquido).");
+        // Opcional: Adicionar lógica para o clique no nó central, se desejar
+        // Por exemplo, router.push('/dashboard/overview');
+    }
+  }, [router]);
+  // ------------------------------------------
+
+  const calculateCenterNodeColor = useCallback((totalProfits: number, totalExpenses: number): string => {
+    const total = totalProfits + totalExpenses;
+
+    if (total === 0) {
+      return '#ECF0F1';
+    }
+
+    const profitRatio = totalProfits / total;
+    const expenseRatio = totalExpenses / total;
+
+    const redColor = [231, 76, 60];
+    const greenColor = [46, 204, 113];
+
+    const r = Math.round(redColor[0] * expenseRatio + greenColor[0] * profitRatio);
+    const g = Math.round(redColor[1] * expenseRatio + greenColor[1] * profitRatio);
+    const b = Math.round(redColor[2] * expenseRatio + greenColor[2] * profitRatio);
+
+    return `rgb(${r},${g},${b})`;
+  }, []);
+
+
+  const prepareGraphData = useCallback(() => {
+    if (!summary) return { nodes: [], edges: [] };
+
+    const nodes: Node[] = [];
+    const edges: Edge[] = [];
+
+    const centerNodeBackgroundColor = calculateCenterNodeColor(summary.totalProfits, summary.totalExpenses);
+
+    // 1. Nó Central: Patrimônio Líquido
+    nodes.push({
+      id: 'net_worth',
+      label: `Valor Líquido:\n$${summary.netWorth.toFixed(2)}`,
+      shape: 'dot',
+      size: 80,
+      font: {
+        color: '#2C3E50',
+        size: 18,
+        align: 'center',
+        multi: true,
+      },
+      color: {
+        background: centerNodeBackgroundColor,
+        border: summary.netWorth >= 0 ? '#27AE60' : '#C0392B',
+        highlight: {
+          background: centerNodeBackgroundColor,
+          border: summary.netWorth >= 0 ? '#2ECC71' : '#E74C3C',
+        }
+      },
+      fixed: true,
+      physics: false,
+    });
+
+    // 2. Nós de Categoria
+    summary.allCategories.forEach(cat => {
+      const profitAmount = summary.profitsByCategory.find(p => p.categoryId === cat.id)?.totalAmount || 0;
+      const expenseAmount = summary.expensesByCategory.find(e => e.categoryId === cat.id)?.totalAmount || 0;
+      const totalAmount = cat.type === 'PROFIT' ? profitAmount : expenseAmount;
+
+      const categorySize = Math.max(30, Math.min(60, 30 + (totalAmount / (summary.totalProfits + summary.totalExpenses || 1)) * 100));
+
+      nodes.push({
+        id: `cat_${cat.id}`, // Garanta que o ID da categoria seja 'cat_ID_DA_CATEGORIA'
+        label: `${cat.name}\n$${totalAmount.toFixed(2)}`,
+        shape: 'dot',
+        size: categorySize,
+        font: {
+          color: '#2C3E50',
+          size: 12,
+          align: 'center',
+          multi: true,
+        },
+        color: {
+          background: '#FFFFFF',
+          border: cat.type === 'PROFIT' ? '#27AE60' : '#C0392B',
+          highlight: {
+            background: '#F0F0F0',
+            border: cat.type === 'PROFIT' ? '#2ECC71' : '#E74C3C',
+          }
+        },
+      });
+
+      // 3. Arestas: Conectar categorias ao nó central
+      edges.push({
+        from: `cat_${cat.id}`,
+        to: 'net_worth',
+        color: {
+          color: '#B0B0B0',
+          highlight: '#7F8C8D',
+          inherit: false,
+        },
+      });
+    });
+
+    return { nodes, edges };
+  }, [summary, calculateCenterNodeColor]);
+
+  const { nodes, edges } = prepareGraphData();
 
   if (loading || dataLoading) {
-    return <div className="min-h-screen flex items-center justify-center text-gray-800">Loading...</div>;
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-300 dark:from-gray-900 dark:to-black text-gray-800 dark:text-gray-200">
+        Carregando...
+      </div>
+    );
   }
 
   if (error) {
-    return <div className="min-h-screen flex flex-col items-center justify-center text-red-600 bg-gray-50">Error: {error}</div>;
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-gray-100 to-gray-300 dark:from-gray-900 dark:to-black text-red-600 dark:text-red-400">
+        Erro: {error}
+      </div>
+    );
   }
 
   if (!summary) {
-    return <div className="min-h-screen flex items-center justify-center text-gray-800">No financial data available.</div>;
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-300 dark:from-gray-900 dark:to-black text-gray-800 dark:text-gray-200">
+        Nenhum dado financeiro disponível.
+      </div>
+    );
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center bg-white text-gray-900 p-4 font-sans antialiased">
-      <div className="w-full max-w-4xl mx-auto flex flex-col sm:flex-row justify-between items-center mb-6">
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-4 sm:mb-0">Dashboard, {user?.username || 'User'}</h1>
-        <button
-          onClick={logout}
-          className="py-2 px-4 bg-gray-900 text-white rounded-md hover:bg-black transition-colors duration-200 text-base shadow-md"
-        >
-          Logout
-        </button>
-      </div>
+    <div className="h-screen flex flex-col items-center p-4 font-sans antialiased bg-gradient-to-br from-gray-100 to-gray-300 dark:from-gray-900 dark:to-black text-gray-900 dark:text-gray-100 relative overflow-hidden gap-y-8">
 
-      <p className="text-base sm:text-lg text-gray-700 mb-8 text-center max-w-xs sm:max-w-md">Your financial overview at a glance.</p>
+      <Card className="w-full max-w-4xl mx-auto flex-1 bg-white/20 dark:bg-gray-800/30 backdrop-blur-md shadow-lg border border-white/30 dark:border-gray-700/50">
+        <CardContent className="p-0 h-full">
+          <GraphView
+            nodesData={nodes}
+            edgesData={edges}
+            onNodeClick={handleNodeClick} // <--- PASSANDO A FUNÇÃO AQUI!
+          />
+        </CardContent>
+      </Card>
 
-      {summary ? (
-        <CircleVisualization
-          netWorth={summary.netWorth}
-          totalProfits={summary.totalProfits}
-          totalExpenses={summary.totalExpenses}
-          profitsByCategory={summary.profitsByCategory}
-          expensesByCategory={summary.expensesByCategory}
-          allCategories={summary.allCategories}
-        />
-      ) : (
-        <p className="text-gray-600">No financial data available.</p>
-      )}
-
-      <div className="mt-8 text-center bg-gray-50 p-6 rounded-lg shadow-inner w-full max-w-sm sm:max-w-md mx-auto">
-        <h2 className="text-xl sm:text-2xl font-semibold mb-4 text-gray-800">Summary Details</h2>
-        <p className="text-lg text-green-700 mb-2">Total Profits: ${summary.totalProfits.toFixed(2)}</p>
-        <p className="text-lg text-red-700 mb-2">Total Expenses: ${summary.totalExpenses.toFixed(2)}</p>
-        <p className="text-2xl font-bold text-gray-900 mt-4">Net Worth: ${summary.netWorth.toFixed(2)}</p>
-      </div>
-
-      <div className="mt-8 flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4">
-        <button
-          onClick={() => setShowCategoryModal(true)}
-          className="py-3 px-6 bg-blue-600 text-white rounded-full hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200 text-lg shadow-md"
-        >
-          Add Category
-        </button>
-        <button
-          onClick={() => setShowProfitModal(true)}
-          className="py-3 px-6 bg-green-600 text-white rounded-full hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors duration-200 text-lg shadow-md"
-        >
-          Add Profit
-        </button>
-        <button
-          onClick={() => setShowExpenseModal(true)}
-          className="py-3 px-6 bg-red-600 text-white rounded-full hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors duration-200 text-lg shadow-md"
-        >
-          Add Expense
-        </button>
-      </div>
-
-      <Modal
-        isOpen={showCategoryModal}
-        onClose={() => setShowCategoryModal(false)}
-        title="Create New Category"
-      >
-        <CategoryForm
-          onSuccess={handleCategorySuccess}
-          onCancel={() => setShowCategoryModal(false)}
-        />
-      </Modal>
-
-      <Modal
-        isOpen={showProfitModal}
-        onClose={() => setShowProfitModal(false)}
-        title="Add New Profit"
-      >
-        <EntryForm
-          onSuccess={handleEntrySuccess}
-          onCancel={() => setShowProfitModal(false)}
-          entryType="PROFIT"
-        />
-      </Modal>
-
-      <Modal
-        isOpen={showExpenseModal}
-        onClose={() => setShowExpenseModal(false)}
-        title="Add New Expense"
-      >
-        <EntryForm
-          onSuccess={handleEntrySuccess}
-          onCancel={() => setShowExpenseModal(false)}
-          entryType="EXPENSE"
-        />
-      </Modal>
+      {/* Componente encapsulado para botões de ação e modais */}
+      <ActionButtonsAndModals
+        onCategorySuccess={handleCategorySuccess}
+        onEntrySuccess={handleEntrySuccess}
+        fetchSummary={fetchSummary}
+      />
     </div>
   );
 }
