@@ -43,7 +43,6 @@ export default function RegisterPage() {
     } catch (err: unknown) {
       console.error("Registration failed:", err);
       setError(err instanceof Error ? err.message : 'Registration failed. Please try again.');
-      // TODO: Para erros do backend (ex: username já existe), parsear o erro e exibir melhor
     }
   };
 

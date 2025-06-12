@@ -1,3 +1,4 @@
+// app/dashboard/components/dashboard/EntryForm.tsx
 'use client';
 
 import { getAllCategories } from '@/app/lib/api/categories';
@@ -5,15 +6,24 @@ import { createExpense } from '@/app/lib/api/expense';
 import { createProfit } from '@/app/lib/api/profits';
 import { useAuth } from '@/app/lib/auth-context';
 import { CategoryResponse, EntryRequest, EntryResponse } from '@/app/lib/types';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react'; // Adicionado useCallback
 
-
+// Importe os componentes Shadcn/ui
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 
 interface EntryFormProps {
     onSuccess: (entry: EntryResponse) => void;
     onCancel: () => void;
     entryType: 'PROFIT' | 'EXPENSE';
-    // initialData?: EntryResponse;
 }
 
 export default function EntryForm({ onSuccess, onCancel, entryType }: EntryFormProps) {
@@ -25,104 +35,92 @@ export default function EntryForm({ onSuccess, onCancel, entryType }: EntryFormP
     const [selectedCategoryId, setSelectedCategoryId] = useState<number | ''>('');
     const [categories, setCategories] = useState<CategoryResponse[]>([]);
     const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
+    const [formError, setFormError] = useState<string | null>(null); // Renomeado para evitar conflito com 'error' em useAuth
     const [categoriesLoading, setCategoriesLoading] = useState(true);
 
-    useEffect(() => {
-        const fetchCategories = async () => {
-            if (!token) {
-                setError('Authentication token missing for categories. Please log in again.');
-                setCategoriesLoading(false);
-                return;
+    const fetchCategories = useCallback(async () => {
+        if (!token) {
+            setFormError('Authentication token missing for categories. Please log in again.');
+            setCategoriesLoading(false);
+            return;
+        }
+        try {
+            const fetchedCategories = await getAllCategories();
+            const filteredCategories = fetchedCategories.filter(cat => cat.type === entryType);
+            setCategories(filteredCategories);
+            if (filteredCategories.length > 0) {
+                setSelectedCategoryId(filteredCategories[0].id);
+            } else {
+                setSelectedCategoryId(''); // Nenhuma categoria disponível
             }
-            try {
-                const fetchedCategories = await getAllCategories();
-                const filteredCategories = fetchedCategories.filter(cat => cat.type === entryType);
-                setCategories(filteredCategories);
-                if (filteredCategories.length > 0) {
-                    setSelectedCategoryId(filteredCategories[0].id);
-                }
-            } catch (err: unknown) {
-                setError((err instanceof Error ? err.message : 'Failed to load categories.'));
-            } finally {
-                setCategoriesLoading(false);
-            }
-        };
+        } catch (err: unknown) {
+            setFormError((err instanceof Error ? err.message : 'Failed to load categories.'));
+        } finally {
+            setCategoriesLoading(false);
+        }
+    }, [token, entryType]);
 
+    useEffect(() => {
         if (token) {
             fetchCategories();
         }
-    }, [token, entryType]);
+    }, [token, fetchCategories]);
 
     // Fora do componente EntryForm
     const formatCurrencyInput = (valueInCents: number): string => {
         if (isNaN(valueInCents) || valueInCents === 0) return '0,00';
 
-        // Converte centavos para string e preenche com zeros à esquerda se necessário
         let stringValue = valueInCents.toString();
-
-        // Garante que há pelo menos 3 dígitos para formatar (ex: 1 -> 001)
         if (stringValue.length < 3) {
             stringValue = stringValue.padStart(3, '0');
         }
 
-        // Insere a vírgula 2 posições antes do final
         const integerPart = stringValue.substring(0, stringValue.length - 2);
         const decimalPart = stringValue.substring(stringValue.length - 2);
 
-        // Adiciona separador de milhares (pontos) se necessário
         const formattedIntegerPart = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
 
         return `${formattedIntegerPart},${decimalPart}`;
     };
 
-    // Handler para formatar o input do valor monetário com a máscara
     const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const inputValue = e.target.value;
-
-        // Remove tudo que não for dígito do valor de entrada (incluindo vírgulas e pontos)
         const digitsOnly = inputValue.replace(/\D/g, '');
-
-        // Converte a string de dígitos para um número inteiro (representando centavos)
         const cents = parseInt(digitsOnly || '0', 10);
 
-        // Formata o valor em centavos de volta para a string de moeda para exibição
         const formattedDisplay = formatCurrencyInput(cents);
 
-        setAmountDisplay(formattedDisplay); // Atualiza o estado da exibição
-        setAmountCents(cents); // Atualiza o estado interno em centavos
+        setAmountDisplay(formattedDisplay);
+        setAmountCents(cents);
     };
-
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        setError(null);
+        setFormError(null); // Usando setFormError
         setLoading(true);
 
-        // Validação de segurança para token e categoria
         if (!token) {
-            setError('Authentication token missing. Please log in again.');
+            setFormError('Authentication token missing. Please log in again.');
             setLoading(false);
             return;
         }
         if (!selectedCategoryId) {
-            setError('Please select a category.');
+            setFormError(`Please select a ${entryType.toLowerCase()} category.`);
             setLoading(false);
             return;
         }
 
-        // Usar o valor em centavos convertido para o formato esperado pela API (reais com ponto)
         const amountForApi = amountCents / 100;
 
         if (isNaN(amountForApi) || amountForApi <= 0) {
-            setError('Amount must be a positive number.');
+            setFormError('Amount must be a positive number.');
             setLoading(false);
             return;
         }
 
         const newEntry: EntryRequest = {
             description,
-            amount: amountForApi, // Usar o valor numérico para a API
+            amount: amountForApi,
             date,
             categoryId: selectedCategoryId as number,
         };
@@ -135,13 +133,19 @@ export default function EntryForm({ onSuccess, onCancel, entryType }: EntryFormP
                 createdEntry = await createExpense(newEntry);
             }
             onSuccess(createdEntry);
-            // Limpar formulário após sucesso (opcional)
+            // Limpar formulário após sucesso
             setDescription('');
-            setAmountDisplay('0,00'); // Limpar a máscara
-            setAmountCents(0); // Resetar centavos
+            setAmountDisplay('0,00');
+            setAmountCents(0);
             setDate('');
+            // Manter a categoria selecionada ou resetar se desejar
+            if (categories.length > 0) {
+                setSelectedCategoryId(categories[0].id);
+            } else {
+                setSelectedCategoryId('');
+            }
         } catch (err: unknown) {
-            setError((err instanceof Error ? err.message : `Failed to create ${entryType.toLowerCase()} entry.`));
+            setFormError((err instanceof Error ? err.message : `Failed to create ${entryType.toLowerCase()} entry.`));
         } finally {
             setLoading(false);
         }
@@ -150,93 +154,85 @@ export default function EntryForm({ onSuccess, onCancel, entryType }: EntryFormP
     const isFormDisabled = loading || authLoading || categoriesLoading;
 
     return (
-        <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-                <label htmlFor="description" className="block text-sm font-medium text-gray-700">
-                    Description
-                </label>
-                <input
-                    type="text"
+        <form onSubmit={handleSubmit} className="space-y-5">
+            <div className="grid gap-2">
+                <Label htmlFor="description">Descrição</Label>
+                <Input
                     id="description"
-                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-gray-500 focus:border-gray-500 sm:text-sm"
+                    type="text"
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                     required
                     disabled={isFormDisabled}
+                    placeholder="Ex: Pagamento do salário, Conta de luz"
                 />
             </div>
-            <div>
-                <label htmlFor="amount" className="block text-sm font-medium text-gray-700">
-                    Amount
-                </label>
-                <input
-                    type="text" // Mantém como type="text"
-                    inputMode="numeric" // Sugere teclado numérico para mobile
+
+            <div className="grid gap-2">
+                <Label htmlFor="amount">Valor</Label>
+                <Input
                     id="amount"
-                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-gray-500 focus:border-gray-500 sm:text-sm"
-                    value={amountDisplay} // Exibe o valor formatado
-                    onChange={handleAmountChange} // Usa o novo handler de máscara
+                    type="text" // Mantém como type="text" para a máscara
+                    inputMode="numeric" // Sugere teclado numérico para mobile
+                    value={amountDisplay}
+                    onChange={handleAmountChange}
                     placeholder="0,00"
                     required
                     disabled={isFormDisabled}
                 />
             </div>
-            <div>
-                <label htmlFor="date" className="block text-sm font-medium text-gray-700">
-                    Date
-                </label>
-                <input
-                    type="date"
+
+            <div className="grid gap-2">
+                <Label htmlFor="date">Data</Label>
+                <Input
                     id="date"
-                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-gray-500 focus:border-gray-500 sm:text-sm"
+                    type="date"
                     value={date}
                     onChange={(e) => setDate(e.target.value)}
                     required
                     disabled={isFormDisabled}
                 />
             </div>
-            <div>
-                <label htmlFor="categoryId" className="block text-sm font-medium text-gray-700">
-                    Category
-                </label>
+
+            <div className="grid gap-2">
+                <Label htmlFor="categoryId">Categoria</Label>
                 {categoriesLoading ? (
-                    <p className="mt-1 text-sm text-gray-500">Loading categories...</p>
+                    <p className="text-gray-500 dark:text-gray-400">Carregando categorias...</p>
                 ) : categories.length === 0 ? (
-                    <p className="mt-1 text-sm text-red-500">No {entryType.toLowerCase()} categories found. Please create one first.</p>
+                    <p className="text-red-500 dark:text-red-400">Nenhuma categoria de {entryType.toLowerCase()} encontrada. Por favor, crie uma primeiro.</p>
                 ) : (
-                    <select
-                        id="categoryId"
-                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-gray-500 focus:border-gray-500 sm:text-sm"
-                        value={selectedCategoryId}
-                        onChange={(e) => setSelectedCategoryId(Number(e.target.value))}
-                        required
-                        disabled={isFormDisabled}
-                    >
-                        {categories.map((cat) => (
-                            <option key={cat.id} value={cat.id}>
-                                {cat.name}
-                            </option>
-                        ))}
-                    </select>
+                    <Select onValueChange={(value) => setSelectedCategoryId(Number(value))} value={String(selectedCategoryId)} disabled={isFormDisabled}>
+                        <SelectTrigger id="categoryId">
+                            <SelectValue placeholder="Selecione a categoria" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {categories.map((cat) => (
+                                <SelectItem key={cat.id} value={String(cat.id)}>
+                                    {cat.name}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
                 )}
             </div>
-            {error && <p className="text-red-500 text-sm">{error}</p>}
-            <div className="flex justify-end space-x-2">
-                <button
+
+            {formError && <p className="text-red-500 dark:text-red-400 text-sm">{formError}</p>}
+            
+            <div className="flex justify-end gap-3 pt-4">
+                <Button
                     type="button"
+                    variant="outline"
                     onClick={onCancel}
-                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300"
                     disabled={isFormDisabled}
                 >
-                    Cancel
-                </button>
-                <button
+                    Cancelar
+                </Button>
+                <Button
                     type="submit"
-                    className="px-4 py-2 text-sm font-medium text-white bg-gray-900 rounded-md hover:bg-black"
                     disabled={isFormDisabled || categories.length === 0}
                 >
-                    {loading ? 'Saving...' : `Save ${entryType === 'PROFIT' ? 'Profit' : 'Expense'}`}
-                </button>
+                    {loading ? 'Salvando...' : `Salvar ${entryType === 'PROFIT' ? 'Lucro' : 'Despesa'}`}
+                </Button>
             </div>
         </form>
     );

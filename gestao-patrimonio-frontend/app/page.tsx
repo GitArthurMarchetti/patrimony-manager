@@ -10,7 +10,11 @@ import { getFinancialSummary } from './lib/api/summary';
 import GraphView from './components/GraphView';
 import { Card, CardContent } from '@/components/ui/card';
 import ActionButtonsAndModals from './components/dashboard/ButtonCreate';
+import CategoryDetailsPanel from './components/dashboard/CategoryDetailsPanel';
+import FinancialOverviewPanel from './components/dashboard/FinancialOverviewPanel'; // <--- Importando o novo componente
 
+// Definindo um tipo para as diferentes visões
+type DashboardView = 'graph' | 'categoryDetails' | 'financialOverview';
 
 export default function DashboardPage() {
   const { isAuthenticated, loading, token } = useAuth();
@@ -18,6 +22,9 @@ export default function DashboardPage() {
   const [summary, setSummary] = useState<FinancialSummaryResponse | null>(null);
   const [dataLoading, setDataLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
+  const [currentView, setCurrentView] = useState<DashboardView>('graph'); // <--- Novo estado para controlar a visão
+
 
   const fetchSummary = useCallback(async () => {
     if (!token) {
@@ -51,26 +58,47 @@ export default function DashboardPage() {
 
   const handleCategorySuccess = useCallback((newCategory: CategoryResponse) => {
     console.log("Category created successfully:", newCategory);
-  }, []);
+    fetchSummary();
+  }, [fetchSummary]);
 
   const handleEntrySuccess = useCallback((newEntry: EntryResponse) => {
     console.log("Entry created successfully:", newEntry);
-  }, []);
+    fetchSummary();
+  }, [fetchSummary]);
 
-  // --- NOVA FUNÇÃO PARA CLICAR EM CATEGORIA ---
+  // --- FUNÇÃO ATUALIZADA PARA CLICAR EM NÓS ---
   const handleNodeClick = useCallback((nodeId: string | number) => {
-    // Verifique se o nodeId é para uma categoria (já filtrado no GraphView, mas bom para segurança)
     if (typeof nodeId === 'string' && nodeId.startsWith('cat_')) {
-      const categoryId = nodeId.replace('cat_', '');
+      const categoryId = parseInt(nodeId.replace('cat_', ''));
       console.log(`Nó de categoria clicado: ${categoryId}`);
-      router.push(`/dashboard/categories/${categoryId}`);
+      setSelectedCategoryId(categoryId);
+      setCurrentView('categoryDetails'); // <--- Mudar para a visão de detalhes da categoria
     } else if (nodeId === 'net_worth') {
         console.log("Nó central clicado (Patrimônio Líquido).");
-        // Opcional: Adicionar lógica para o clique no nó central, se desejar
-        // Por exemplo, router.push('/dashboard/overview');
+        setSelectedCategoryId(null); // Limpar qualquer categoria selecionada
+        setCurrentView('financialOverview'); // <--- Mudar para a visão de overview financeiro
     }
-  }, [router]);
+  }, []);
   // ------------------------------------------
+
+  // --- Funções para fechar os painéis e voltar ao gráfico ---
+  const handleClosePanel = useCallback(() => {
+    setSelectedCategoryId(null); // Garante que nenhuma categoria esteja selecionada
+    setCurrentView('graph'); // Volta para a visão do gráfico
+  }, []);
+
+  // --- Função para lidar com a deleção de categoria (recarrega o summary e fecha o painel) ---
+  const handleCategoryDeleted = useCallback(() => {
+    fetchSummary(); // Recarrega o summary para remover a categoria do gráfico
+    handleClosePanel(); // Fecha o painel de detalhes e volta ao gráfico
+  }, [fetchSummary, handleClosePanel]);
+
+  // --- Função para lidar com a modificação de entradas (recarrega o summary) ---
+  const handleEntryModified = useCallback(() => {
+    fetchSummary(); // Recarrega o summary para atualizar os valores no gráfico
+    // Não precisa fechar o painel aqui, pois o usuário pode querer continuar no histórico
+  }, [fetchSummary]);
+
 
   const calculateCenterNodeColor = useCallback((totalProfits: number, totalExpenses: number): string => {
     const total = totalProfits + totalExpenses;
@@ -101,7 +129,6 @@ export default function DashboardPage() {
 
     const centerNodeBackgroundColor = calculateCenterNodeColor(summary.totalProfits, summary.totalExpenses);
 
-    // 1. Nó Central: Patrimônio Líquido
     nodes.push({
       id: 'net_worth',
       label: `Valor Líquido:\n$${summary.netWorth.toFixed(2)}`,
@@ -125,7 +152,6 @@ export default function DashboardPage() {
       physics: false,
     });
 
-    // 2. Nós de Categoria
     summary.allCategories.forEach(cat => {
       const profitAmount = summary.profitsByCategory.find(p => p.categoryId === cat.id)?.totalAmount || 0;
       const expenseAmount = summary.expensesByCategory.find(e => e.categoryId === cat.id)?.totalAmount || 0;
@@ -134,7 +160,7 @@ export default function DashboardPage() {
       const categorySize = Math.max(30, Math.min(60, 30 + (totalAmount / (summary.totalProfits + summary.totalExpenses || 1)) * 100));
 
       nodes.push({
-        id: `cat_${cat.id}`, // Garanta que o ID da categoria seja 'cat_ID_DA_CATEGORIA'
+        id: `cat_${cat.id}`,
         label: `${cat.name}\n$${totalAmount.toFixed(2)}`,
         shape: 'dot',
         size: categorySize,
@@ -154,7 +180,6 @@ export default function DashboardPage() {
         },
       });
 
-      // 3. Arestas: Conectar categorias ao nó central
       edges.push({
         from: `cat_${cat.id}`,
         to: 'net_worth',
@@ -171,6 +196,7 @@ export default function DashboardPage() {
 
   const { nodes, edges } = prepareGraphData();
 
+  // Condicionais de carregamento e erro permanecem os mesmos
   if (loading || dataLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-300 dark:from-gray-900 dark:to-black text-gray-800 dark:text-gray-200">
@@ -195,20 +221,53 @@ export default function DashboardPage() {
     );
   }
 
+  // --- Renderização condicional dos painéis ---
+  const renderContent = () => {
+    switch (currentView) {
+      case 'graph':
+        return (
+          <GraphView
+            nodesData={nodes}
+            edgesData={edges}
+            onNodeClick={handleNodeClick}
+          />
+        );
+      case 'categoryDetails':
+        return (
+          <CategoryDetailsPanel
+            categoryId={selectedCategoryId}
+            onClose={handleClosePanel} // Usa a função genérica de fechar
+            onCategoryDeleted={handleCategoryDeleted}
+            onEntryModified={handleEntryModified}
+          />
+        );
+      case 'financialOverview':
+        return (
+          <FinancialOverviewPanel
+            summary={summary} // Passa o summary completo
+            onClose={handleClosePanel} // Usa a função genérica de fechar
+          />
+        );
+      default:
+        return (
+          <GraphView
+            nodesData={nodes}
+            edgesData={edges}
+            onNodeClick={handleNodeClick}
+          />
+        );
+    }
+  };
+
   return (
     <div className="h-screen flex flex-col items-center p-4 font-sans antialiased bg-gradient-to-br from-gray-100 to-gray-300 dark:from-gray-900 dark:to-black text-gray-900 dark:text-gray-100 relative overflow-hidden gap-y-8">
 
       <Card className="w-full max-w-4xl mx-auto flex-1 bg-white/20 dark:bg-gray-800/30 backdrop-blur-md shadow-lg border border-white/30 dark:border-gray-700/50">
         <CardContent className="p-0 h-full">
-          <GraphView
-            nodesData={nodes}
-            edgesData={edges}
-            onNodeClick={handleNodeClick} // <--- PASSANDO A FUNÇÃO AQUI!
-          />
+          {renderContent()} {/* <--- Renderiza o conteúdo baseado na visão atual */}
         </CardContent>
       </Card>
 
-      {/* Componente encapsulado para botões de ação e modais */}
       <ActionButtonsAndModals
         onCategorySuccess={handleCategorySuccess}
         onEntrySuccess={handleEntrySuccess}

@@ -127,7 +127,7 @@ export default function ActionButtonsAndModals({
 
             {/* Modais de Formulário com Dialog ShadCN (inalterados) */}
             <Dialog open={showCategoryModal} onOpenChange={setShowCategoryModal}>
-                <DialogContent className="bg-white/20 dark:bg-gray-800/30 backdrop-blur-md border border-white/30 dark:border-gray-700/50">
+                <DialogContent className="bg-white border border-white/30 dark:border-gray-700/50">
                     <DialogHeader>
                         <DialogTitle className="text-gray-900 dark:text-white">Criar Nova Categoria</DialogTitle>
                     </DialogHeader>
@@ -139,7 +139,7 @@ export default function ActionButtonsAndModals({
             </Dialog>
 
             <Dialog open={showProfitModal} onOpenChange={setShowProfitModal}>
-                <DialogContent className="bg-white/20 dark:bg-gray-800/30 backdrop-blur-md border border-white/30 dark:border-gray-700/50">
+                <DialogContent className="bg-white border border-white/30 dark:border-gray-700/50">
                     <DialogHeader>
                         <DialogTitle className="text-gray-900 dark:text-white">Adicionar Novo Lucro</DialogTitle>
                     </DialogHeader>
@@ -152,7 +152,7 @@ export default function ActionButtonsAndModals({
             </Dialog>
 
             <Dialog open={showExpenseModal} onOpenChange={setShowExpenseModal}>
-                <DialogContent className="bg-white/20 dark:bg-gray-800/30 backdrop-blur-md border border-white/30 dark:border-gray-700/50">
+                <DialogContent className="bg-white border border-white/30 dark:border-gray-700/50">
                     <DialogHeader>
                         <DialogTitle className="text-gray-900 dark:text-white">Adicionar Nova Despesa</DialogTitle>
                     </DialogHeader>

@@ -84,7 +84,6 @@ export default function GraphView({ nodesData, edgesData, onNodeClick }: GraphVi
             avoidOverlap: 0.9,
           },
           minVelocity: 0.75,
-          solver: 'barnesHut',
           stabilization: {
             enabled: true,
             iterations: 2000,
@@ -100,7 +99,7 @@ export default function GraphView({ nodesData, edgesData, onNodeClick }: GraphVi
           tooltipDelay: 200,
           selectConnectedEdges: false, 
           multiselect: false,          
-                  },
+        },
         layout: {
           randomSeed: 42,
         },
@@ -112,7 +111,7 @@ export default function GraphView({ nodesData, edgesData, onNodeClick }: GraphVi
 
       networkInstance.current = new Network(networkRef.current, data, options);
 
-      // --- AJUSTADO: Lógica do clique para ser mais robusta ---
+      // --- CORRIGIDO: Lógica do clique para incluir o nó central ---
       networkInstance.current.on("click", (params) => {
         // Verifica se algum nó foi clicado
         if (params.nodes.length > 0) {
@@ -120,10 +119,12 @@ export default function GraphView({ nodesData, edgesData, onNodeClick }: GraphVi
           // Log para depuração: verifique o ID do nó clicado
           console.log("Nó clicado:", clickedNodeId);
 
-          // Chamamos onNodeClick se ele existe e o nó clicado não é o nó central
-          // A verificação 'startsWith("cat_")' é crucial para as categorias
-          if (onNodeClick && typeof clickedNodeId === 'string' && clickedNodeId.startsWith('cat_')) {
-            onNodeClick(clickedNodeId); // Passa o ID completo (ex: 'cat_123')
+          // Dispara onNodeClick se ele existe E o nó clicado é uma categoria OU o nó central
+          if (onNodeClick) {
+            if (typeof clickedNodeId === 'string' && 
+               (clickedNodeId.startsWith('cat_') || clickedNodeId === 'net_worth')) {
+              onNodeClick(clickedNodeId);
+            }
           }
         }
       });
