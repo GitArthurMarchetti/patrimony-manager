@@ -11,9 +11,8 @@ import GraphView from './components/GraphView';
 import { Card, CardContent } from '@/components/ui/card';
 import ActionButtonsAndModals from './components/dashboard/ButtonCreate';
 import CategoryDetailsPanel from './components/dashboard/CategoryDetailsPanel';
-import FinancialOverviewPanel from './components/dashboard/FinancialOverviewPanel'; // <--- Importando o novo componente
+import FinancialOverviewPanel from './components/dashboard/FinancialOverviewPanel';
 
-// Definindo um tipo para as diferentes visões
 type DashboardView = 'graph' | 'categoryDetails' | 'financialOverview';
 
 export default function DashboardPage() {
@@ -23,7 +22,7 @@ export default function DashboardPage() {
   const [dataLoading, setDataLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
-  const [currentView, setCurrentView] = useState<DashboardView>('graph'); // <--- Novo estado para controlar a visão
+  const [currentView, setCurrentView] = useState<DashboardView>('graph');
 
 
   const fetchSummary = useCallback(async () => {
@@ -66,37 +65,31 @@ export default function DashboardPage() {
     fetchSummary();
   }, [fetchSummary]);
 
-  // --- FUNÇÃO ATUALIZADA PARA CLICAR EM NÓS ---
   const handleNodeClick = useCallback((nodeId: string | number) => {
     if (typeof nodeId === 'string' && nodeId.startsWith('cat_')) {
       const categoryId = parseInt(nodeId.replace('cat_', ''));
-      console.log(`Nó de categoria clicado: ${categoryId}`);
+      console.log(`Category node clicked: ${categoryId}`); // Translated
       setSelectedCategoryId(categoryId);
-      setCurrentView('categoryDetails'); // <--- Mudar para a visão de detalhes da categoria
+      setCurrentView('categoryDetails'); // Change to category details view
     } else if (nodeId === 'net_worth') {
-        console.log("Nó central clicado (Patrimônio Líquido).");
-        setSelectedCategoryId(null); // Limpar qualquer categoria selecionada
-        setCurrentView('financialOverview'); // <--- Mudar para a visão de overview financeiro
+      console.log("Central node clicked (Net worth)."); // Translated
+      setSelectedCategoryId(null); // Clear any selected category
+      setCurrentView('financialOverview'); // Change to financial overview view
     }
   }, []);
-  // ------------------------------------------
 
-  // --- Funções para fechar os painéis e voltar ao gráfico ---
   const handleClosePanel = useCallback(() => {
-    setSelectedCategoryId(null); // Garante que nenhuma categoria esteja selecionada
-    setCurrentView('graph'); // Volta para a visão do gráfico
+    setSelectedCategoryId(null); // Ensures no category is selected
+    setCurrentView('graph'); // Returns to graph view
   }, []);
 
-  // --- Função para lidar com a deleção de categoria (recarrega o summary e fecha o painel) ---
   const handleCategoryDeleted = useCallback(() => {
-    fetchSummary(); // Recarrega o summary para remover a categoria do gráfico
-    handleClosePanel(); // Fecha o painel de detalhes e volta ao gráfico
+    fetchSummary(); // Reload summary to remove the category from the graph
+    handleClosePanel(); // Close details panel and return to graph
   }, [fetchSummary, handleClosePanel]);
 
-  // --- Função para lidar com a modificação de entradas (recarrega o summary) ---
   const handleEntryModified = useCallback(() => {
-    fetchSummary(); // Recarrega o summary para atualizar os valores no gráfico
-    // Não precisa fechar o painel aqui, pois o usuário pode querer continuar no histórico
+    fetchSummary(); // Reload summary to update values on the graph
   }, [fetchSummary]);
 
 
@@ -131,7 +124,7 @@ export default function DashboardPage() {
 
     nodes.push({
       id: 'net_worth',
-      label: `Valor Líquido:\n$${summary.netWorth.toFixed(2)}`,
+      label: `Net worth: \n$${summary.netWorth.toFixed(2)}`,
       shape: 'dot',
       size: 80,
       font: {
@@ -196,11 +189,10 @@ export default function DashboardPage() {
 
   const { nodes, edges } = prepareGraphData();
 
-  // Condicionais de carregamento e erro permanecem os mesmos
   if (loading || dataLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-300 dark:from-gray-900 dark:to-black text-gray-800 dark:text-gray-200">
-        Carregando...
+        Loading...
       </div>
     );
   }
@@ -208,7 +200,7 @@ export default function DashboardPage() {
   if (error) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-gray-100 to-gray-300 dark:from-gray-900 dark:to-black text-red-600 dark:text-red-400">
-        Erro: {error}
+        Error: {error} {/* Translated */}
       </div>
     );
   }
@@ -216,12 +208,11 @@ export default function DashboardPage() {
   if (!summary) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-300 dark:from-gray-900 dark:to-black text-gray-800 dark:text-gray-200">
-        Nenhum dado financeiro disponível.
+        No financial data available. {/* Translated */}
       </div>
     );
   }
 
-  // --- Renderização condicional dos painéis ---
   const renderContent = () => {
     switch (currentView) {
       case 'graph':
@@ -236,7 +227,7 @@ export default function DashboardPage() {
         return (
           <CategoryDetailsPanel
             categoryId={selectedCategoryId}
-            onClose={handleClosePanel} // Usa a função genérica de fechar
+            onClose={handleClosePanel}
             onCategoryDeleted={handleCategoryDeleted}
             onEntryModified={handleEntryModified}
           />
@@ -244,8 +235,8 @@ export default function DashboardPage() {
       case 'financialOverview':
         return (
           <FinancialOverviewPanel
-            summary={summary} // Passa o summary completo
-            onClose={handleClosePanel} // Usa a função genérica de fechar
+            summary={summary}
+            onClose={handleClosePanel}
           />
         );
       default:
@@ -264,7 +255,7 @@ export default function DashboardPage() {
 
       <Card className="w-full max-w-4xl mx-auto flex-1 bg-white/20 dark:bg-gray-800/30 backdrop-blur-md shadow-lg border border-white/30 dark:border-gray-700/50">
         <CardContent className="p-0 h-full">
-          {renderContent()} {/* <--- Renderiza o conteúdo baseado na visão atual */}
+          {renderContent()}
         </CardContent>
       </Card>
 

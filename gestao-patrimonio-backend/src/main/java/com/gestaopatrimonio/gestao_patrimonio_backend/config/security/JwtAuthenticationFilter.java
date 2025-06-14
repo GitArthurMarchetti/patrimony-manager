@@ -38,6 +38,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         System.out.println("DEBUG: JwtAuthenticationFilter - Processing request for: " + request.getRequestURI());
 
+        // A lógica de filtro JWT só deve ser executada se houver um token
+        // A parte do shouldNotFilter abaixo irá garantir que este filtro não é executado para caminhos permitidos
         if(authHeader == null || !authHeader.startsWith("Bearer ")){
             System.out.println("DEBUG: JwtAuthenticationFilter - No Bearer token found in Authorization header.");
             filterChain.doFilter(request, response);
@@ -86,5 +88,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         filterChain.doFilter(request, response);
         System.out.println("DEBUG: JwtAuthenticationFilter - Filter chain continued.");
+    }
+
+
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) throws ServletException {
+        String path = request.getRequestURI();
+        return path.startsWith("/auth/") || path.startsWith("/h2-console/") || path.startsWith("/auth/") || path.equals("/favicon.ico");
     }
 }

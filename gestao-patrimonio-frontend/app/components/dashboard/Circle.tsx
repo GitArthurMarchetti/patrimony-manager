@@ -78,7 +78,7 @@ export default function CircleVisualization({
           zIndex: 10,
         }}
       >
-        <span className="text-lg md:text-xl mb-1">Patrimônio Líquido:</span>
+        <span className="text-lg md:text-xl mb-1">Net worth:</span>
         <span className="p-2 text-2xl md:text-3xl">${netWorth.toFixed(2)}</span>
         <div className="mt-4 text-center text-sm md:text-base">
           <p className="text-green-300">Lucros: ${totalProfits.toFixed(2)}</p>

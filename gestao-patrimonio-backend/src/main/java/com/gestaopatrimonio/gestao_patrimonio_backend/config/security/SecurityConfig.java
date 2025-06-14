@@ -17,11 +17,11 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
-import org.springframework.web.cors.CorsConfiguration; // IMPORT NECESSÁRIO
-import org.springframework.web.cors.CorsConfigurationSource; // IMPORT NECESSÁRIO
-import org.springframework.web.cors.UrlBasedCorsConfigurationSource; // IMPORT NECESSÁRIO
-import java.util.Arrays; // IMPORT NECESSÁRIO
-import java.util.List; // IMPORT NECESSÁRIO
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import java.util.Arrays;
+import java.util.List;
 
 @Configuration
 @EnableWebSecurity
@@ -39,10 +39,11 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .csrf(csrf -> csrf.disable())
-                .cors(Customizer.withDefaults()) // <-- AQUI! HABILITA CORS COM O BEAN corsConfigurationSource()
+                .cors(Customizer.withDefaults())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers("/api/auth/**", "/h2-console/**").permitAll()
+                        // ADICIONE "/error" AQUI!
+                        .requestMatchers("/auth/**", "/h2-console/**", "/auth/**", "/favicon.ico", "/error").permitAll()
                         .anyRequest().authenticated()
                 )
                 .authenticationProvider(authenticationProvider())

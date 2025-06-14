@@ -55,7 +55,7 @@ export default function FinancialOverviewPanel({ summary, onClose }: FinancialOv
     if (dataLoading) {
         return (
             <div className="flex flex-col items-center justify-center h-full text-gray-800 dark:text-gray-200">
-                Carregando todas as entradas...
+                Loading all entries... 
             </div>
         );
     }
@@ -63,7 +63,7 @@ export default function FinancialOverviewPanel({ summary, onClose }: FinancialOv
     if (error) {
         return (
             <div className="flex flex-col items-center justify-center h-full text-red-600 dark:text-red-400 p-4">
-                Erro: {error}
+                Error: {error} 
             </div>
         );
     }
@@ -71,7 +71,7 @@ export default function FinancialOverviewPanel({ summary, onClose }: FinancialOv
     if (!summary) {
         return (
             <div className="flex flex-col items-center justify-center h-full text-gray-600 dark:text-gray-400">
-                Dados do sumário financeiro não disponíveis.
+                Financial summary data not available. 
             </div>
         );
     }
@@ -79,7 +79,7 @@ export default function FinancialOverviewPanel({ summary, onClose }: FinancialOv
     return (
         <div className="h-full flex flex-col p-4 rounded-lg  overflow-y-auto">
             <div className="w-full flex justify-between items-center mb-4 sticky top-0 bg-inherit pb-2 z-10">
-                <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">Visão Geral Financeira</h1>
+                <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">Financial Overview:</h1>
                 <button onClick={onClose} className="text-gray-600 hover:text-gray-800 transition-colors dark:text-gray-400 dark:hover:text-gray-200">
                     <XIcon className="h-6 w-6" />
                 </button>
@@ -87,23 +87,23 @@ export default function FinancialOverviewPanel({ summary, onClose }: FinancialOv
 
             <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
                 <div className="p-4 bg-white dark:bg-gray-700 rounded-lg shadow-sm border border-gray-200 dark:border-gray-600">
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Patrimônio Líquido</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Net worth</p>
                     <p className="text-lg font-bold text-gray-900 dark:text-gray-100">${summary.netWorth.toFixed(2)}</p>
                 </div>
                 <div className="p-4 bg-white dark:bg-gray-700 rounded-lg shadow-sm border border-green-500 dark:border-green-400">
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Total de Lucros</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Total Profits:</p>
                     <p className="text-lg font-bold text-green-600 dark:text-green-400">${summary.totalProfits.toFixed(2)}</p>
                 </div>
                 <div className="p-4 bg-white dark:bg-gray-700 rounded-lg shadow-sm border border-red-500 dark:border-red-400">
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Total de Despesas</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Total Expenses:</p>
                     <p className="text-lg font-bold text-red-600 dark:text-red-400">${summary.totalExpenses.toFixed(2)}</p>
                 </div>
             </div>
 
-            <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">Histórico Completo</h2>
+            <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">Full History</h2> 
 
             {allEntries.length === 0 ? (
-                <p className="text-base text-gray-600 dark:text-gray-400 mt-4 text-center">Nenhuma entrada encontrada.</p>
+                <p className="text-base text-gray-600 dark:text-gray-400 mt-4 text-center">No entries found.</p> 
             ) : (
                 <div className="flex-1 overflow-y-auto mt-2 space-y-3">
                     {allEntries.map((entry) => {
@@ -121,9 +121,9 @@ export default function FinancialOverviewPanel({ summary, onClose }: FinancialOv
                                 <div>
                                     <p className="text-sm text-gray-800 dark:text-gray-200 font-semibold">{entry.description}</p>
                                     <p className="text-xs text-gray-600 dark:text-gray-400">
-                                        Categoria: {entry.category.name} {/* <--- NOME DA CATEGORIA CORRIGIDO AQUI */}
+                                        Category: {entry.category.name} 
                                     </p>
-                                    <p className="text-xs text-gray-600 dark:text-gray-400">Data: {entry.date}</p>
+                                    <p className="text-xs text-gray-600 dark:text-gray-400">Date: {entry.date}</p> 
                                 </div>
                                 <p className={`text-base font-bold ${itemTextColorClass}`}>${entry.amount.toFixed(2)}</p>
                             </div>

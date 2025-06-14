@@ -13,9 +13,9 @@ import CategoryActionsModal from '../common/CategoryActionModal';
 
 interface CategoryDetailsPanelProps {
     categoryId: number | null;
-    onClose: () => void; // Função para fechar o painel
-    onCategoryDeleted: () => void; // Callback para quando uma categoria é deletada
-    onEntryModified: () => void; // Callback para quando uma entrada é modificada (criada/editada/deletada)
+    onClose: () => void; // Function to close the panel
+    onCategoryDeleted: () => void; // Callback for when a category is deleted
+    onEntryModified: () => void; // Callback for when an entry is modified (created/edited/deleted)
 }
 
 export default function CategoryDetailsPanel({
@@ -31,7 +31,7 @@ export default function CategoryDetailsPanel({
     const [error, setError] = useState<string | null>(null);
     const [currentCategory, setCurrentCategory] = useState<CategoryResponse | null>(null);
 
-    // Estados para os modais
+    // Modal states
     const [isEntryModalOpen, setIsEntryModalOpen] = useState(false);
     const [selectedEntry, setSelectedEntry] = useState<EntryResponse | null>(null);
     const [entryActionType, setEntryActionType] = useState<'delete' | 'update'>('delete');
@@ -39,7 +39,7 @@ export default function CategoryDetailsPanel({
     const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
     const [categoryActionType, setCategoryActionType] = useState<'delete' | 'update'>('delete');
 
-    // --- Funções de busca de dados ---
+    // --- Data fetching functions ---
     const fetchCategoryHistory = useCallback(async () => {
         if (!token || categoryId === null) {
             setError('Authentication token or category ID is missing.');
@@ -89,7 +89,7 @@ export default function CategoryDetailsPanel({
     }, [isAuthenticated, loading, categoryId, fetchCategoryHistory]);
 
 
-    // --- Funções para ABRIR modais ---
+    // --- Functions to OPEN modals ---
     const handleOpenEntryModal = (entry: EntryResponse, type: 'delete' | 'update') => {
         setSelectedEntry(entry);
         setEntryActionType(type);
@@ -106,7 +106,7 @@ export default function CategoryDetailsPanel({
         }
     };
 
-    // --- Funções para FECHAR modais ---
+    // --- Functions to CLOSE modals ---
     const handleCloseEntryModal = () => {
         setIsEntryModalOpen(false);
         setSelectedEntry(null);
@@ -116,23 +116,23 @@ export default function CategoryDetailsPanel({
         setIsCategoryModalOpen(false);
     };
 
-    // --- Funções de AÇÃO (agora com as APIs) ---
+    // --- ACTION functions (now with APIs) ---
 
     const handleConfirmDeleteEntry = useCallback(async (id: number) => {
         if (!token || !currentCategory) return;
         try {
             if (currentCategory.type === 'PROFIT') {
                 await deleteProfit(id);
-                console.log(`Lucro com ID ${id} deletado.`);
+                console.log(`Profit with ID ${id} deleted.`); 
             } else { // EXPENSE
                 await deleteExpense(id);
-                console.log(`Despesa com ID ${id} deletada.`);
+                console.log(`Expense with ID ${id} deleted.`); 
             }
-            fetchCategoryHistory(); // Recarrega os dados após a deleção
-            onEntryModified(); // Notifica o DashboardPage que uma entrada foi modificada
+            fetchCategoryHistory(); // Reload data after deletion
+            onEntryModified(); // Notify DashboardPage that an entry was modified
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Falha ao deletar entrada.');
-            console.error("Erro ao deletar entrada:", err);
+            setError(err instanceof Error ? err.message : 'Failed to delete entry.'); 
+            console.error("Error deleting entry:", err); 
         } finally {
             handleCloseEntryModal();
         }
@@ -150,16 +150,16 @@ export default function CategoryDetailsPanel({
 
             if (currentCategory.type === 'PROFIT') {
                 await updateProfit(updatedEntry.id, entryRequest);
-                console.log(`Lucro com ID ${updatedEntry.id} atualizado.`);
+                console.log(`Profit with ID ${updatedEntry.id} updated.`); 
             } else { // EXPENSE
                 await updateExpense(updatedEntry.id, entryRequest);
-                console.log(`Despesa com ID ${updatedEntry.id} atualizada.`);
+                console.log(`Expense with ID ${updatedEntry.id} updated.`); 
             }
-            fetchCategoryHistory(); // Recarrega os dados após a atualização
-            onEntryModified(); // Notifica o DashboardPage que uma entrada foi modificada
+            fetchCategoryHistory(); // Reload data after update
+            onEntryModified(); // Notify DashboardPage that an entry was modified
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Falha ao atualizar entrada.');
-            console.error("Erro ao atualizar entrada:", err);
+            setError(err instanceof Error ? err.message : 'Failed to update entry.'); 
+            console.error("Error updating entry:", err); 
         } finally {
             handleCloseEntryModal();
         }
@@ -169,12 +169,12 @@ export default function CategoryDetailsPanel({
         if (!token) return;
         try {
             await deleteCategory(id);
-            console.log(`Categoria com ID ${id} deletada.`);
-            onCategoryDeleted(); // Notifica o DashboardPage que a categoria foi deletada
-            onClose(); // Fecha o painel após deletar a categoria
+            console.log(`Category with ID ${id} deleted.`); 
+            onCategoryDeleted(); // Notify DashboardPage that the category was deleted
+            onClose(); // Close panel after deleting category
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Falha ao deletar categoria.');
-            console.error("Erro ao deletar categoria:", err);
+            setError(err instanceof Error ? err.message : 'Failed to delete category.'); 
+            console.error("Error deleting category:", err); 
         } finally {
             handleCloseCategoryModal();
         }
@@ -188,12 +188,12 @@ export default function CategoryDetailsPanel({
                 type: updatedCategory.type,
             };
             await updateCategory(updatedCategory.id, categoryRequest);
-            console.log(`Categoria com ID ${updatedCategory.id} atualizada.`);
-            setCurrentCategory(updatedCategory); // Atualiza o estado local da categoria
-            fetchCategoryHistory(); // Recarrega os dados para garantir consistência
+            console.log(`Category with ID ${updatedCategory.id} updated.`); 
+            setCurrentCategory(updatedCategory); // Update local category state
+            fetchCategoryHistory(); // Reload data to ensure consistency
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Falha ao atualizar categoria.');
-            console.error("Erro ao atualizar categoria:", err);
+            setError(err instanceof Error ? err.message : 'Failed to update category.'); 
+            console.error("Error updating category:", err); 
         } finally {
             handleCloseCategoryModal();
         }
@@ -203,7 +203,7 @@ export default function CategoryDetailsPanel({
     if (loading || dataLoading) {
         return (
             <div className="flex flex-col items-center justify-center h-full text-gray-800 dark:text-gray-200">
-                Carregando histórico...
+                Loading history... 
             </div>
         );
     }
@@ -211,7 +211,7 @@ export default function CategoryDetailsPanel({
     if (error) {
         return (
             <div className="flex flex-col items-center justify-center h-full text-red-600 dark:text-red-400 p-4">
-                Erro: {error}
+                Error: {error} 
             </div>
         );
     }
@@ -219,7 +219,7 @@ export default function CategoryDetailsPanel({
     if (!currentCategory || categoryId === null) {
         return (
             <div className="flex flex-col items-center justify-center h-full text-gray-600 dark:text-gray-400">
-                Selecione uma categoria no gráfico.
+                Select a category on the chart. 
             </div>
         );
     }
@@ -228,7 +228,7 @@ export default function CategoryDetailsPanel({
         <div className="h-full flex flex-col p-4  overflow-y-auto">
             <div className="w-full flex justify-between items-center mb-4 sticky top-0 bg-inherit pb-2 z-10">
                 <div className="flex items-center gap-3">
-                    <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">Histórico de {currentCategory.name}</h1>
+                    <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">History of {currentCategory.name}</h1> 
                     <button onClick={() => handleOpenCategoryModal('update')} className="text-blue-600 hover:text-blue-800 transition-colors dark:text-blue-400 dark:hover:text-blue-600">
                         <PencilIcon className="h-5 w-5" />
                     </button>
@@ -242,42 +242,42 @@ export default function CategoryDetailsPanel({
             </div>
 
             {entries.length === 0 ? (
-                <p className="text-base text-gray-600 dark:text-gray-400 mt-4 text-center">Nenhuma entrada encontrada para esta categoria.</p>
+                <p className="text-base text-gray-600 dark:text-gray-400 mt-4 text-center">No entries found for this category.</p>
             ) : (
-                <div className="flex-1 overflow-y-auto mt-2 space-y-3">
-                    {entries.map((entry) => {
-                        // A classe da borda é definida AQUI, para CADA ITEM, usando o tipo da CATEGORIA ATUAL
-                        // Usamos currentCategory.type porque todas as entradas nesta visualização pertencem à mesma categoria
-                        const itemBorderColorClass = currentCategory.type === 'PROFIT' ? 'border-green-500 dark:border-green-400' : 'border-red-500 dark:border-red-400';
+            <div className="flex-1 overflow-y-auto mt-2 space-y-3">
+                {entries.map((entry) => {
+                    // The border class is defined HERE, for EACH ITEM, using the current CATEGORY type
+                    // We use currentCategory.type because all entries in this view belong to the same category
+                    const itemBorderColorClass = currentCategory.type === 'PROFIT' ? 'border-green-500 dark:border-green-400' : 'border-red-500 dark:border-red-400';
 
-                        return (
-                            <div
-                                key={entry.id}
-                                className={`p-3 bg-white dark:bg-gray-700 rounded-lg shadow-sm border-2 ${itemBorderColorClass} flex justify-between items-center`}
-                            >
-                                <div>
-                                    <p className="text-sm text-gray-800 dark:text-gray-200 font-semibold">{entry.description}</p>
-                                    <p className="text-xs text-gray-600 dark:text-gray-400">Valor: ${entry.amount.toFixed(2)}</p>
-                                    <p className="text-xs text-gray-600 dark:text-gray-400">Data: {entry.date}</p>
-                                </div>
-                                <div className="flex space-x-2">
-                                    <button
-                                        onClick={() => handleOpenEntryModal(entry, 'update')}
-                                        className="text-blue-600 hover:text-blue-800 transition-colors dark:text-blue-400 dark:hover:text-blue-600"
-                                    >
-                                        <PencilIcon className="h-4 w-4" />
-                                    </button>
-                                    <button
-                                        onClick={() => handleOpenEntryModal(entry, 'delete')}
-                                        className="text-red-600 hover:text-red-800 transition-colors dark:text-red-400 dark:hover:text-red-600"
-                                    >
-                                        <TrashIcon className="h-4 w-4" />
-                                    </button>
-                                </div>
+                    return (
+                        <div
+                            key={entry.id}
+                            className={`p-3 bg-white dark:bg-gray-700 rounded-lg shadow-sm border-2 ${itemBorderColorClass} flex justify-between items-center`}
+                        >
+                            <div>
+                                <p className="text-sm text-gray-800 dark:text-gray-200 font-semibold">{entry.description}</p>
+                                <p className="text-xs text-gray-600 dark:text-gray-400">Amount: ${entry.amount.toFixed(2)}</p> 
+                                <p className="text-xs text-gray-600 dark:text-gray-400">Date: {entry.date}</p> 
                             </div>
-                        );
-                    })}
-                </div>
+                            <div className="flex space-x-2">
+                                <button
+                                    onClick={() => handleOpenEntryModal(entry, 'update')}
+                                    className="text-blue-600 hover:text-blue-800 transition-colors dark:text-blue-400 dark:hover:text-blue-600"
+                                >
+                                    <PencilIcon className="h-4 w-4" />
+                                </button>
+                                <button
+                                    onClick={() => handleOpenEntryModal(entry, 'delete')}
+                                    className="text-red-600 hover:text-red-800 transition-colors dark:text-red-400 dark:hover:text-red-600"
+                                >
+                                    <TrashIcon className="h-4 w-4" />
+                                </button>
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
             )}
 
             <EntryActionsModal
@@ -292,10 +292,10 @@ export default function CategoryDetailsPanel({
             <CategoryActionsModal
                 isOpen={isCategoryModalOpen}
                 onClose={handleCloseCategoryModal}
-                category={currentCategory} 
-                actionType={categoryActionType} 
-                onConfirmDelete={handleConfirmDeleteCategory} 
-                onUpdateCategory={handleUpdateCategory} 
+                category={currentCategory}
+                actionType={categoryActionType}
+                onConfirmDelete={handleConfirmDeleteCategory}
+                onUpdateCategory={handleUpdateCategory}
             />
         </div>
     );

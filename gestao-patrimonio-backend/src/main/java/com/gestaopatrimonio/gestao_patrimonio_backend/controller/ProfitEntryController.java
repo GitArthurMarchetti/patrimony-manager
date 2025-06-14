@@ -26,7 +26,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @RestController
-@RequestMapping("/api/profits")
+@RequestMapping("/profits")
 @RequiredArgsConstructor
 public class ProfitEntryController {
 

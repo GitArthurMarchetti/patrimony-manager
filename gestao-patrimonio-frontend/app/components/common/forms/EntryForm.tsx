@@ -6,9 +6,9 @@ import { createExpense } from '@/app/lib/api/expense';
 import { createProfit } from '@/app/lib/api/profits';
 import { useAuth } from '@/app/lib/auth-context';
 import { CategoryResponse, EntryRequest, EntryResponse } from '@/app/lib/types';
-import React, { useState, useEffect, useCallback } from 'react'; // Adicionado useCallback
+import React, { useState, useEffect, useCallback } from 'react';
 
-// Importe os componentes Shadcn/ui
+// Import Shadcn/ui components
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -29,13 +29,13 @@ interface EntryFormProps {
 export default function EntryForm({ onSuccess, onCancel, entryType }: EntryFormProps) {
     const { token, loading: authLoading } = useAuth();
     const [description, setDescription] = useState('');
-    const [amountDisplay, setAmountDisplay] = useState('0,00'); // Estado para o que o usuário vê
-    const [amountCents, setAmountCents] = useState(0); // Estado para o valor em centavos (número)
+    const [amountDisplay, setAmountDisplay] = useState('0,00'); // State for what the user sees
+    const [amountCents, setAmountCents] = useState(0); // State for the amount in cents (number)
     const [date, setDate] = useState('');
     const [selectedCategoryId, setSelectedCategoryId] = useState<number | ''>('');
     const [categories, setCategories] = useState<CategoryResponse[]>([]);
     const [loading, setLoading] = useState(false);
-    const [formError, setFormError] = useState<string | null>(null); // Renomeado para evitar conflito com 'error' em useAuth
+    const [formError, setFormError] = useState<string | null>(null);
     const [categoriesLoading, setCategoriesLoading] = useState(true);
 
     const fetchCategories = useCallback(async () => {
@@ -51,7 +51,7 @@ export default function EntryForm({ onSuccess, onCancel, entryType }: EntryFormP
             if (filteredCategories.length > 0) {
                 setSelectedCategoryId(filteredCategories[0].id);
             } else {
-                setSelectedCategoryId(''); // Nenhuma categoria disponível
+                setSelectedCategoryId(''); // No category available
             }
         } catch (err: unknown) {
             setFormError((err instanceof Error ? err.message : 'Failed to load categories.'));
@@ -66,7 +66,6 @@ export default function EntryForm({ onSuccess, onCancel, entryType }: EntryFormP
         }
     }, [token, fetchCategories]);
 
-    // Fora do componente EntryForm
     const formatCurrencyInput = (valueInCents: number): string => {
         if (isNaN(valueInCents) || valueInCents === 0) return '0,00';
 
@@ -96,7 +95,7 @@ export default function EntryForm({ onSuccess, onCancel, entryType }: EntryFormP
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        setFormError(null); // Usando setFormError
+        setFormError(null);
         setLoading(true);
 
         if (!token) {
@@ -133,12 +132,12 @@ export default function EntryForm({ onSuccess, onCancel, entryType }: EntryFormP
                 createdEntry = await createExpense(newEntry);
             }
             onSuccess(createdEntry);
-            // Limpar formulário após sucesso
+            // Clear form after success
             setDescription('');
             setAmountDisplay('0,00');
             setAmountCents(0);
             setDate('');
-            // Manter a categoria selecionada ou resetar se desejar
+            // Keep selected category or reset if desired
             if (categories.length > 0) {
                 setSelectedCategoryId(categories[0].id);
             } else {
@@ -156,7 +155,7 @@ export default function EntryForm({ onSuccess, onCancel, entryType }: EntryFormP
     return (
         <form onSubmit={handleSubmit} className="space-y-5">
             <div className="grid gap-2">
-                <Label htmlFor="description">Descrição</Label>
+                <Label htmlFor="description">Description</Label> 
                 <Input
                     id="description"
                     type="text"
@@ -164,16 +163,16 @@ export default function EntryForm({ onSuccess, onCancel, entryType }: EntryFormP
                     onChange={(e) => setDescription(e.target.value)}
                     required
                     disabled={isFormDisabled}
-                    placeholder="Ex: Pagamento do salário, Conta de luz"
+                    placeholder="Ex: Salary payment, Electricity bill" 
                 />
             </div>
 
             <div className="grid gap-2">
-                <Label htmlFor="amount">Valor</Label>
+                <Label htmlFor="amount">Amount</Label> 
                 <Input
                     id="amount"
-                    type="text" // Mantém como type="text" para a máscara
-                    inputMode="numeric" // Sugere teclado numérico para mobile
+                    type="text"
+                    inputMode="numeric"
                     value={amountDisplay}
                     onChange={handleAmountChange}
                     placeholder="0,00"
@@ -183,7 +182,7 @@ export default function EntryForm({ onSuccess, onCancel, entryType }: EntryFormP
             </div>
 
             <div className="grid gap-2">
-                <Label htmlFor="date">Data</Label>
+                <Label htmlFor="date">Date</Label> 
                 <Input
                     id="date"
                     type="date"
@@ -195,15 +194,15 @@ export default function EntryForm({ onSuccess, onCancel, entryType }: EntryFormP
             </div>
 
             <div className="grid gap-2">
-                <Label htmlFor="categoryId">Categoria</Label>
+                <Label htmlFor="categoryId">Category</Label> 
                 {categoriesLoading ? (
-                    <p className="text-gray-500 dark:text-gray-400">Carregando categorias...</p>
+                    <p className="text-gray-500 dark:text-gray-400">Loading categories...</p> 
                 ) : categories.length === 0 ? (
-                    <p className="text-red-500 dark:text-red-400">Nenhuma categoria de {entryType.toLowerCase()} encontrada. Por favor, crie uma primeiro.</p>
+                    <p className="text-red-500 dark:text-red-400">No {entryType.toLowerCase()} category found. Please create one first.</p> 
                 ) : (
                     <Select onValueChange={(value) => setSelectedCategoryId(Number(value))} value={String(selectedCategoryId)} disabled={isFormDisabled}>
                         <SelectTrigger id="categoryId">
-                            <SelectValue placeholder="Selecione a categoria" />
+                            <SelectValue placeholder="Select category" /> 
                         </SelectTrigger>
                         <SelectContent>
                             {categories.map((cat) => (
@@ -225,13 +224,13 @@ export default function EntryForm({ onSuccess, onCancel, entryType }: EntryFormP
                     onClick={onCancel}
                     disabled={isFormDisabled}
                 >
-                    Cancelar
+                    Cancel 
                 </Button>
                 <Button
                     type="submit"
                     disabled={isFormDisabled || categories.length === 0}
                 >
-                    {loading ? 'Salvando...' : `Salvar ${entryType === 'PROFIT' ? 'Lucro' : 'Despesa'}`}
+                    {loading ? 'Saving...' : `Save ${entryType === 'PROFIT' ? 'Profit' : 'Expense'}`} 
                 </Button>
             </div>
         </form>
