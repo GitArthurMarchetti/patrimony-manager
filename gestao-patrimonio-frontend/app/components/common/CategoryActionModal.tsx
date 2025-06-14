@@ -60,7 +60,7 @@ export default function CategoryActionsModal({
         {isDeleting ? (
           <>
             <p className="mb-4 text-gray-700">
-              Você tem certeza que deseja deletar a categoria **"{category.name}"**?
+              Você tem certeza que deseja deletar a categoria **{category.name}**?
               Todas as entradas associadas a ela serão perdidas.
             </p>
             <div className="flex justify-end gap-3">

@@ -1,6 +1,6 @@
 import { CategoryResponse } from './categories';
 
-export interface CategorySummaryResponse {
+ interface CategorySummaryResponse {
   categoryId: number;
   categoryName: string;
   categoryType: 'PROFIT' | 'EXPENSE';

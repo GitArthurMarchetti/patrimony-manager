@@ -3,7 +3,7 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import { XIcon } from 'lucide-react';
-import { FinancialSummaryResponse, EntryResponse, CategoryResponse } from '@/app/lib/types';
+import { FinancialSummaryResponse, EntryResponse } from '@/app/lib/types';
 import { getAllProfits } from '@/app/lib/api/profits';
 import { getAllExpenses } from '@/app/lib/api/expense';
 import { useAuth } from '@/app/lib/auth-context';
