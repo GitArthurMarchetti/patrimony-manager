@@ -5,11 +5,11 @@ const nextConfig: NextConfig = {
   async rewrites() {
     return [
       {
-        source: '/api/(.*)', // Captura TUDO depois de /api/, ex: /auth/register
+        source: '/api/(.*)', // Captura tudo depois de /api/
         // ATENÇÃO: COLOQUE A URL COMPLETA DO SEU BACKEND NA AWS AQUI
-        // O '$1' passará tudo o que foi capturado pelo '(.*)'
         destination: 'http://gestao-patrimonio-backend-env.us-east-2.elasticbeanstalk.com/api/$1',
-        permanent: false, // Garante que é um rewrite (proxy), não um redirect 301
+        // **REMOVA ESTA LINHA:**
+        // permanent: false,
       },
     ];
   },
