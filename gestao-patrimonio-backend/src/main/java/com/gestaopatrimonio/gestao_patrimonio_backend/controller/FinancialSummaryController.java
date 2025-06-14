@@ -25,7 +25,7 @@ import java.util.List;
 import java.util.ArrayList;
 
 @RestController
-@RequestMapping("/summary")
+@RequestMapping("/api/summary")
 @RequiredArgsConstructor
 public class FinancialSummaryController {
 

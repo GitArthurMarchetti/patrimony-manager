@@ -42,8 +42,8 @@ public class SecurityConfig {
                 .cors(Customizer.withDefaults())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authorize -> authorize
-                        // ADICIONE "/error" AQUI!
-                        .requestMatchers("/auth/**", "/h2-console/**", "/auth/**", "/favicon.ico", "/error").permitAll()
+                        // ADICIONE "/web/**" AQUI!
+                        .requestMatchers("/api/auth/**", "/h2-console/**", "/auth/**", "/favicon.ico", "/error", "/web/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .authenticationProvider(authenticationProvider())
@@ -51,6 +51,7 @@ public class SecurityConfig {
 
         return http.build();
     }
+
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
