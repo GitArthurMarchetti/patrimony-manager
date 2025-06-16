@@ -1,7 +1,8 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { triggerLogout } from "../auth-utils";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8080/api';
+// Remova a variável API_BASE_URL daqui. Ela não é mais necessária,
+// pois o sistema de 'rewrites' do Next.js cuidará do direcionamento da URL base.
 
 const getAuthToken = (): string | null => {
   if (typeof window !== 'undefined') {
@@ -17,7 +18,15 @@ interface RequestOptions extends RequestInit {
 
 export async function fetchApi(endpoint: string, options: RequestOptions = {}): Promise<unknown> {
   const { requireAuth = true, token, headers, ...restOptions } = options;
-  const url = `${API_BASE_URL}${endpoint}`;
+
+  // --- CORREÇÃO AQUI: Garante que a URL comece com '/api/' ---
+  let url = endpoint;
+  // Se o endpoint não começar com '/api/' (e não for uma URL absoluta), adicione o prefixo.
+  // Isso permite que suas chamadas de API como fetchApi('/summary') sejam reescritas corretamente.
+  if (!url.startsWith('/api/') && !url.startsWith('http://') && !url.startsWith('https://')) {
+    url = `/api${endpoint}`;
+  }
+  // -------------------------------------------------------------
 
   const finalHeaders: Record<string, string> = {
     'Content-Type': 'application/json',
@@ -32,7 +41,7 @@ export async function fetchApi(endpoint: string, options: RequestOptions = {}): 
     finalHeaders['Authorization'] = `Bearer ${authToken}`;
   }
 
-  const response = await fetch(url, {
+  const response = await fetch(url, { // 'url' agora sempre terá o '/api/' quando necessário
     ...restOptions,
     headers: finalHeaders,
   });
@@ -47,7 +56,7 @@ export async function fetchApi(endpoint: string, options: RequestOptions = {}): 
     let errorData;
     try {
       errorData = await response.json();
-    } catch (_e: unknown) { // CORREÇÃO: tipando _e como unknown
+    } catch (_e: unknown) {
       // Se não conseguiu parsear JSON do erro, usa a mensagem de status da resposta
       errorData = { message: response.statusText || 'An unexpected error occurred.' };
     }
@@ -59,7 +68,7 @@ export async function fetchApi(endpoint: string, options: RequestOptions = {}): 
   try {
     const text = await response.text();
     return text ? JSON.parse(text) : null;
-  } catch (_e: unknown) { // CORREÇÃO: tipando _e como unknown
-    return null; // CORREÇÃO: Retorna null se não conseguir parsear como JSON (resposta vazia, etc.)
+  } catch (_e: unknown) {
+    return null; // Retorna null se não conseguir parsear como JSON (resposta vazia, etc.)
   }
 }

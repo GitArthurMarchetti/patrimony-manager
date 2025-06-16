@@ -10,8 +10,9 @@ interface CategoryActionsModalProps {
   onClose: () => void;
   category: CategoryResponse | null;
   actionType: 'delete' | 'update';
-  onConfirmDelete?: (categoryId: number) => void;
-  onUpdateCategory?: (updatedCategory: CategoryResponse) => void;
+  // onConfirmDelete e onUpdateCategory AGORA RETORNAM Promise<void>
+  onConfirmDelete?: (categoryId: number) => Promise<void>; // <--- ALTERADO
+  onUpdateCategory?: (updatedCategory: CategoryResponse) => Promise<void>; // <--- ALTERADO
 }
 
 export default function CategoryActionsModal({
@@ -24,11 +25,17 @@ export default function CategoryActionsModal({
 }: CategoryActionsModalProps) {
   const [categoryName, setCategoryName] = useState('');
   const [categoryType, setCategoryType] = useState<'PROFIT' | 'EXPENSE'>('PROFIT');
+  const [error, setError] = useState<string | null>(null); // <-- ADICIONADO: Estado para mensagens de erro
 
   useEffect(() => {
     if (isOpen && category) {
       setCategoryName(category.name);
       setCategoryType(category.type);
+      setError(null); // <--- ADICIONADO: Limpar erros ao abrir o modal
+    } else if (!isOpen) {
+        setCategoryName('');
+        setCategoryType('PROFIT');
+        setError(null); // <--- ADICIONADO: Limpar erros ao fechar o modal
     }
   }, [isOpen, category]);
 
@@ -36,18 +43,52 @@ export default function CategoryActionsModal({
 
   const isDeleting = actionType === 'delete';
 
-  const handleConfirmAction = () => {
+  const handleConfirmAction = async () => { // <--- ALTERADO: Função agora é assíncrona
+    setError(null); // <--- ADICIONADO: Limpa qualquer erro anterior antes de tentar a ação
+
     if (isDeleting && onConfirmDelete) {
-      onConfirmDelete(category.id);
+      try { // <--- ADICIONADO: Bloco try-catch para deleção
+        await onConfirmDelete(category.id);
+        onClose(); // Fecha o modal APENAS se a deleção for bem-sucedida
+      } catch (err: unknown) {
+        let errorMessage = 'Failed to delete category. Please try again.';
+        if (err instanceof Error) {
+            errorMessage = err.message;
+        } else if (typeof err === 'string') {
+            errorMessage = err;
+        }
+        console.error('Error deleting category:', err);
+        setError(errorMessage); // Exibe o erro no modal
+      }
     } else if (!isDeleting && onUpdateCategory) {
+      // <--- ADICIONADO: Validação básica no frontend para feedback imediato --->
+      if (!categoryName.trim()) {
+        setError("Category Name cannot be empty. Please provide a name.");
+        return; // Impede a chamada à API
+      }
+      // <--- FIM DA VALIDAÇÃO --->
+
       const updatedCategory: CategoryResponse = {
         ...category,
         name: categoryName,
         type: categoryType,
       };
-      onUpdateCategory(updatedCategory);
+
+      try {
+        await onUpdateCategory(updatedCategory); // Chama a função assíncrona
+        onClose(); // Fecha o modal APENAS se a atualização for bem-sucedida
+      } catch (err: unknown) { // <--- ADICIONADO: Bloco try-catch para atualização
+        let errorMessage = 'An unexpected error occurred. Please check your input and try again.';
+        if (err instanceof Error) {
+            errorMessage = err.message;
+        } else if (typeof err === 'string') {
+            errorMessage = err;
+        }
+        console.error('Failed to update category:', err);
+        setError(errorMessage); // Exibe o erro no modal
+      }
     }
-    onClose();
+    // Removido: onClose() aqui, pois agora só fecha em caso de sucesso dentro dos blocos try
   };
 
   return (
@@ -74,6 +115,9 @@ export default function CategoryActionsModal({
           </>
         ) : (
           <>
+            {error && ( // <--- ADICIONADO: Exibe a mensagem de erro
+              <p className="text-red-600 text-sm mb-3">{error}</p>
+            )}
             <div className="mb-4">
               <Label htmlFor="categoryName" className="text-gray-700">Category Name</Label>
               <Input

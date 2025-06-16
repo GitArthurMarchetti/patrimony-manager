@@ -1,15 +1,27 @@
 import type { NextConfig } from "next";
 
+const NEXT_PUBLIC_BACKEND_URL_DEV = 'http://localhost:8080'; 
+
 const nextConfig: NextConfig = {
-  /* outras opções de configuração aqui (se houver) */
+
   async rewrites() {
+    let backendDestinationUrl: string;
+
+    if (process.env.NODE_ENV === 'development') {
+      backendDestinationUrl = NEXT_PUBLIC_BACKEND_URL_DEV;
+    } else {
+      if (!process.env.NEXT_PUBLIC_API_BASE_URL) {
+        console.error("ERRO: NEXT_PUBLIC_API_BASE_URL não está definida no ambiente de produção. As requisições API podem falhar.");
+        backendDestinationUrl = '';
+      } else {
+        backendDestinationUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
+      }
+    }
+
     return [
       {
-        source: '/api/(.*)', // Captura tudo depois de /api/
-        // ATENÇÃO: COLOQUE A URL COMPLETA DO SEU BACKEND NA AWS AQUI
-        destination: 'http://gestao-patrimonio-backend-env.us-east-2.elasticbeanstalk.com/api/$1',
-        // **REMOVA ESTA LINHA:**
-        // permanent: false,
+        source: '/api/:path*', 
+        destination: `${backendDestinationUrl}/api/:path*`, 
       },
     ];
   },

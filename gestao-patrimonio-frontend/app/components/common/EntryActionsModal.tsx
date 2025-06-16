@@ -10,16 +10,14 @@ interface EntryActionsModalProps {
   onClose: () => void;
   entry: EntryResponse | null;
   actionType: 'delete' | 'update';
-  onConfirmDelete?: (entryId: number) => void;
-  onUpdateEntry?: (updatedEntry: EntryResponse) => void;
+  onConfirmDelete?: (entryId: number) => Promise<void>; // <--- ALTERADO
+  onUpdateEntry?: (updatedEntry: EntryResponse) => Promise<void>; // <--- ALTERADO
 }
 
-// Reutilizada do EntryForm.tsx
 const formatCurrencyInput = (valueInCents: number): string => {
     if (isNaN(valueInCents) || valueInCents === 0) return '0,00';
 
     let stringValue = valueInCents.toString();
-    // Garante que tenha pelo menos 3 dígitos (para 0,00)
     if (stringValue.length < 3) {
         stringValue = stringValue.padStart(3, '0');
     }
@@ -27,7 +25,6 @@ const formatCurrencyInput = (valueInCents: number): string => {
     const integerPart = stringValue.substring(0, stringValue.length - 2);
     const decimalPart = stringValue.substring(stringValue.length - 2);
 
-    // Adiciona pontos como separador de milhares
     const formattedIntegerPart = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
 
     return `${formattedIntegerPart},${decimalPart}`;
@@ -43,26 +40,25 @@ export default function EntryActionsModal({
   onUpdateEntry,
 }: EntryActionsModalProps) {
   const [description, setDescription] = useState('');
-  // Alterado para gerenciar o valor exibido (string) e o valor em centavos (número)
   const [amountDisplay, setAmountDisplay] = useState('0,00');
   const [amountCents, setAmountCents] = useState(0);
   const [date, setDate] = useState('');
+  const [error, setError] = useState<string | null>(null); // <-- ADICIONADO
 
   useEffect(() => {
     if (isOpen && entry) {
       setDescription(entry.description);
-      // Ao abrir o modal, converte o valor do `entry.amount` (que está em reais/dólares) para centavos,
-      // e depois formata para exibição na máscara.
       const initialAmountCents = Math.round(entry.amount * 100);
       setAmountCents(initialAmountCents);
       setAmountDisplay(formatCurrencyInput(initialAmountCents));
       setDate(entry.date);
+      setError(null); // <--- ADICIONADO
     } else if (!isOpen) {
-        // Limpar estados quando o modal é fechado
         setDescription('');
         setAmountDisplay('0,00');
         setAmountCents(0);
         setDate('');
+        setError(null); // <--- ADICIONADO
     }
   }, [isOpen, entry]);
 
@@ -72,29 +68,54 @@ export default function EntryActionsModal({
 
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const inputValue = e.target.value;
-    // Remove tudo que não for dígito
     const digitsOnly = inputValue.replace(/\D/g, '');
-    // Converte para inteiro (em centavos)
     const cents = parseInt(digitsOnly || '0', 10);
 
-    // Formata para exibição
     const formattedDisplay = formatCurrencyInput(cents);
 
     setAmountDisplay(formattedDisplay);
     setAmountCents(cents);
   };
 
-  const handleConfirmAction = () => {
+  const handleConfirmAction = async () => { // <--- ALTERADO
+    setError(null); // <--- ADICIONADO
+
     if (isDeleting && onConfirmDelete) {
-      onConfirmDelete(entry.id);
+      try { // <--- ADICIONADO: Bloco try-catch para deleção
+        await onConfirmDelete(entry.id);
+        onClose();
+      } catch (err: unknown) {
+        let errorMessage = 'Failed to delete entry. Please try again.';
+        if (err instanceof Error) {
+            errorMessage = err.message;
+        } else if (typeof err === 'string') {
+            errorMessage = err;
+        }
+        console.error('Error deleting entry:', err);
+        setError(errorMessage);
+      }
     } else if (!isDeleting && onUpdateEntry) {
-      // Usa amountCents para o valor que será enviado para a API (convertido para o valor real depois)
+      // <--- ADICIONADO: Validação básica no frontend para feedback imediato --->
+      if (!description.trim()) {
+        setError("Description cannot be empty. Please provide a description.");
+        return;
+      }
+      if (amountCents <= 0) {
+          setError("Amount must be greater than zero. Please enter a valid amount.");
+          return;
+      }
+      if (!date) {
+          setError("Date cannot be empty. Please select a date.");
+          return;
+      }
+      // <--- FIM DA VALIDAÇÃO --->
+
       const amountForApi = amountCents / 100;
 
       const updatedEntry: EntryResponse = {
-        ...entry, // Keep original ID and other properties
+        ...entry,
         description: description,
-        amount: amountForApi, // Usa o valor numérico correto
+        amount: amountForApi,
         date: date,
         category: {
             id: entry.category.id,
@@ -102,9 +123,21 @@ export default function EntryActionsModal({
             type: entry.category.type,
         }
       };
-      onUpdateEntry(updatedEntry);
+
+      try {
+        await onUpdateEntry(updatedEntry);
+        onClose();
+      } catch (err: unknown) { // <--- ADICIONADO
+        let errorMessage = 'An unexpected error occurred. Please check your input and try again.';
+        if (err instanceof Error) {
+            errorMessage = err.message;
+        } else if (typeof err === 'string') {
+            errorMessage = err;
+        }
+        console.error('Failed to update entry:', err);
+        setError(errorMessage);
+      }
     }
-    onClose();
   };
 
   const formattedDate = date ? new Date(date).toISOString().split('T')[0] : '';
@@ -132,6 +165,9 @@ export default function EntryActionsModal({
           </>
         ) : (
           <>
+            {error && ( // <--- ADICIONADO
+              <p className="text-red-600 text-sm mb-3">{error}</p>
+            )}
             <div className="mb-4">
               <Label htmlFor="entryDescription" className="text-gray-700">Description</Label>
               <Input
@@ -146,10 +182,10 @@ export default function EntryActionsModal({
               <Label htmlFor="entryAmount" className="text-gray-700">Amount</Label>
               <Input
                 id="entryAmount"
-                type="text" // Alterado para "text" para permitir máscara
-                inputMode="numeric" // Sugere teclado numérico para mobile
-                value={amountDisplay} // Bind ao estado da exibição
-                onChange={handleAmountChange} // Usa a nova função de máscara
+                type="text" 
+                inputMode="numeric" 
+                value={amountDisplay} 
+                onChange={handleAmountChange} 
                 className="mt-1"
               />
             </div>
