@@ -1,9 +1,8 @@
 import type { NextConfig } from "next";
 
-const NEXT_PUBLIC_BACKEND_URL_DEV = 'http://localhost:8080'; 
+const NEXT_PUBLIC_BACKEND_URL_DEV = 'http://localhost:8080';
 
 const nextConfig: NextConfig = {
-
   async rewrites() {
     let backendDestinationUrl: string;
 
@@ -16,12 +15,16 @@ const nextConfig: NextConfig = {
       } else {
         backendDestinationUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
       }
+      // *****************************************************************
+      // ADICIONE ESTA LINHA TEMPORARIAMENTE PARA DEBUG!
+      console.log("Vercel Build - NEXT_PUBLIC_API_BASE_URL (lida no next.config.ts):", backendDestinationUrl);
+      // *****************************************************************
     }
 
     return [
       {
-        source: '/api/:path*', 
-        destination: `${backendDestinationUrl}/api/:path*`, 
+        source: '/api/:path*',
+        destination: `${backendDestinationUrl}/api/:path*`,
       },
     ];
   },
