@@ -23,6 +23,8 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors; // Import necessário
+import org.springframework.beans.factory.annotation.Value; // Import necessário
 
 @Configuration
 @EnableWebSecurity
@@ -30,6 +32,10 @@ public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthFilter;
     private final UserDetailsServiceImpl userDetailsService;
+
+    // --- NOVO: Injeta a variável de ambiente CORS_ALLOWED_ORIGINS ---
+    @Value("${cors.allowed-origins:http://localhost:3000}") // Valor padrão para dev local
+    private String corsAllowedOrigins;
 
     public SecurityConfig(JwtAuthenticationFilter jwtAuthFilter, UserDetailsServiceImpl userDetailsService) {
         this.jwtAuthFilter = jwtAuthFilter;
@@ -43,9 +49,7 @@ public class SecurityConfig {
                 .cors(Customizer.withDefaults())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authorize -> authorize
-                        // Permitir acesso a endpoints de autenticação e outros recursos públicos
                         .requestMatchers("/api/auth/**", "/h2-console/**", "/auth/**", "/favicon.ico", "/error", "/web/**").permitAll()
-                        // Todas as outras requisições exigem autenticação
                         .anyRequest().authenticated()
                 )
                 .authenticationProvider(authenticationProvider())
@@ -60,30 +64,26 @@ public class SecurityConfig {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         CorsConfiguration config = new CorsConfiguration();
 
-        // Configura as origens permitidas para requisições CORS
-        // Inclui localhost para desenvolvimento, a URL do frontend na Vercel
-        // e a URL do seu backend no Elastic Beanstalk (opcional, mas boa prática)
-        config.setAllowedOrigins(List.of(
-                "http://localhost:3000", // Para o ambiente de desenvolvimento local do frontend
-                "https://patrimony-manager-avfp-k95vj0pbh-arthurs-projects-fceb2ed4.vercel.app", // A URL COMPLETA DO SEU FRONTEND NA VERCEL
-                "http://gestao-patrimonio-backend-env.us-east-2.elasticbeanstalk.com" // A URL do seu próprio backend no Elastic Beanstalk
-        ));
-        config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS")); // Métodos HTTP permitidos
-        config.setAllowedHeaders(List.of("*")); // Permite todos os headers nas requisições CORS
-        config.setAllowCredentials(true); // Permite o envio de cookies e headers de autorização
-        source.registerCorsConfiguration("/**", config); // Aplica esta configuração CORS a todos os caminhos
+        // Divide a string da variável de ambiente em uma lista de origens
+        List<String> origins = Arrays.stream(corsAllowedOrigins.split(","))
+                .map(String::trim)
+                .collect(Collectors.toList());
+
+        config.setAllowedOrigins(origins); // Usa a lista de origens lida da variável
+        config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        config.setAllowedHeaders(List.of("*"));
+        config.setAllowCredentials(true);
+        source.registerCorsConfiguration("/**", config);
         return source;
     }
 
     @Bean
     public PasswordEncoder passwordEncoder() {
-        // Define o encoder de senha a ser usado (BCrypt para segurança)
         return new BCryptPasswordEncoder();
     }
 
     @Bean
     public DaoAuthenticationProvider authenticationProvider() {
-        // Configura o provedor de autenticação com o UserDetailsService e o PasswordEncoder
         DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider(userDetailsService);
         authProvider.setPasswordEncoder(passwordEncoder());
         return authProvider;
@@ -91,7 +91,6 @@ public class SecurityConfig {
 
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration authenticationConfiguration) throws Exception {
-        // Expõe o AuthenticationManager para ser injetado onde for necessário (e.g., AuthController)
         return authenticationConfiguration.getAuthenticationManager();
     }
 }
